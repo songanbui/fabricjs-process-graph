@@ -1,0 +1,22 @@
+{
+  "rules": {
+    "linebreak-style": "off",
+    "max-len": [1, 200],
+    "no-underscore-dangle": "off",
+    "no-multi-assign": "off",
+    "prefer-destructuring": ["error", {
+      "array": false,
+      "object": true
+    }],
+    "import/extensions": ["error", {
+      "js": "always"
+    }]
+  },
+  "env": {
+    "browser": true,
+    "es6": true
+  },
+  "globals": {
+  },
+  "extends": "airbnb"
+}
