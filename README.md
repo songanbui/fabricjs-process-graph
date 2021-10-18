@@ -1,0 +1,4 @@
+- npm install
+- bower install
+- grunt
+- open demo/index.html in your browser
