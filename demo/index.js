@@ -1,8 +1,7 @@
-import ProcessGraph from '../src/ProcessGraph.js';
-import Container from '../src/Container.js';
-
 // Start app
 const main = function main() {
+  const { ProcessGraph, Container } = window.pg;
+
   // Initialize Process Graph
   const processGraph = new ProcessGraph({
     canvasOpts: {
