@@ -38,9 +38,11 @@ export default class ProcessGraph {
     };
 
     canvas.calcOffset();
+
+    // Prevent non LinkableShape objects to be grouped during selection
     const onSelection = () => {
       const active = canvas.getActiveObject();
-      // When multi selection, remove any non Rectangle objects
+      // When multi selection, remove any non Linkable Shape objects
       if (active.type === 'activeSelection') {
         const objects = active.getObjects();
         if (objects.length > 1) {
@@ -50,13 +52,15 @@ export default class ProcessGraph {
             canvas,
           });
           canvas._setActiveObject(sel);
+
+          // Update any links connected to the Linkable Shape
         }
       }
     };
+
     canvas.on({
       'selection:created': onSelection,
       'selection:updated': onSelection,
-      // 'selection:cleared': onSelectionCleared
     });
   }
 
@@ -208,6 +212,7 @@ export default class ProcessGraph {
               break;
           }
           target.set(attrs);
+          target.setCoords();
         },
       };
       if (this.grid > 0) {

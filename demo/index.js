@@ -27,7 +27,7 @@ const main = function main() {
   new Container({
     id: 'r2',
     canvas,
-    left: 700,
+    left: 600,
     top: 50,
     angle: 0,
     label: 'Screw MB to Case',
@@ -35,8 +35,8 @@ const main = function main() {
   new Container({
     id: 'r3',
     canvas,
-    left: 1200,
-    top: 200,
+    left: 1050,
+    top: 150,
     angle: 45,
     label: 'Insert RAM',
   }).inject();

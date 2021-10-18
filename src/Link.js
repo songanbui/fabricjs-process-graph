@@ -49,10 +49,10 @@ export default class Link {
     const pathOpts = this.defaultPathOptions = {
       fill: '',
       stroke: (options.custom && options.custom.path && options.custom.path.strokeWidth) ? options.custom.path.stroke : '#000',
-      strokeWidth: (options.custom && options.custom.path && options.custom.path.strokeWidth) ? options.custom.path.strokeWidth : 1,
+      strokeWidth: (options.custom && options.custom.path && options.custom.path.strokeWidth) ? options.custom.path.strokeWidth : 2,
       objectCaching: false,
-      selectable: false,
-      hasBorders: false,
+      selectable: true,
+      hasBorders: true,
       hasControls: false,
       lockMovementX: true,
       lockMovementY: true,
@@ -95,7 +95,7 @@ export default class Link {
       selectable: false,
       hasBorders: false,
       hasControls: false,
-      evented: true,
+      evented: false,
       opacity: 0,
     };
     const controlLine1 = this.controlLine1 = new fabric.Line([controlPoint.left, controlPoint.top, x1, y1], controlLineOpts);

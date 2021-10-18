@@ -20,20 +20,87 @@ export default class LinkableShape {
       top,
       angle,
     } = options;
+    this.options = options;
     this.id = id;
     this.canvas = canvas;
 
-    this.shape = new fabric.Group([shape], {
-      left,
-      top,
-      hasBorders: true,
-      hasControls: true,
-      originX: 'left',
-      originY: 'top',
-      id,
-      angle: angle || 0,
+    // Set shape
+    shape.set('type', 'linkableShape');
+    shape.set({
+      left, top, id, angle,
     });
-    this.shape.type = 'linkableShape';
+    this.shape = shape;
+
+    // Show coordinates/angle when moving/rotating object
+    const modificationBox = new fabric.Rect({
+      left: 0,
+      top: 0,
+      originX: 'center',
+      originY: 'center',
+      strokeWidth: 1,
+      stroke: '#666',
+      fill: '#fff',
+      width: 70,
+      height: 20,
+      vented: false,
+      selectable: false,
+      opacity: 0,
+    });
+    const modificationText = new fabric.Text('0, 0', {
+      left: 0,
+      top: 0,
+      originX: 'center',
+      originY: 'center',
+      fontFamily: 'Helvetica',
+      fontSize: 12,
+      borderStrokeWidth: 4,
+      evented: false,
+      selectable: false,
+      opacity: 0,
+    });
+    const modification = this.modBox = new fabric.Group([modificationBox, modificationText], {
+      left: 0,
+      top: 0,
+      originX: 'center',
+      originY: 'center',
+      evented: false,
+      selectable: false,
+    });
+    const onMoving = () => {
+      const { x, y } = shape.aCoords.tl;
+      const xCoords = [shape.aCoords.tl.x, shape.aCoords.tr.x, shape.aCoords.bl.x, shape.aCoords.br.x];
+      const yCoords = [shape.aCoords.tl.y, shape.aCoords.tr.y, shape.aCoords.bl.y, shape.aCoords.br.y];
+      modification.left = (Math.min(...xCoords) + Math.max(...xCoords)) / 2;
+      modification.top = Math.round(Math.max(...yCoords) + 30);
+      modificationBox.set('opacity', 0.7);
+      modificationText.set('opacity', 1);
+      modificationText.set('text', `${Math.round(x)}, ${Math.round(y)}`);
+      canvas.bringToFront(modification);
+    };
+    const onMoved = () => {
+      modificationBox.set('opacity', 0);
+      modificationText.set('opacity', 0);
+    };
+    const onRotating = () => {
+      const xCoords = [shape.aCoords.tl.x, shape.aCoords.tr.x, shape.aCoords.bl.x, shape.aCoords.br.x];
+      const yCoords = [shape.aCoords.tl.y, shape.aCoords.tr.y, shape.aCoords.bl.y, shape.aCoords.br.y];
+      modification.left = (Math.min(...xCoords) + Math.max(...xCoords)) / 2;
+      modification.top = Math.round(Math.max(...yCoords) + 30);
+      modificationBox.set('opacity', 0.7);
+      modificationText.set('opacity', 1);
+      modificationText.set('text', `${Math.round(shape.angle > 180 ? shape.angle - 360 : shape.angle)}°`);
+      canvas.bringToFront(modification);
+    };
+    const onRotated = () => {
+      modificationBox.set('opacity', 0);
+      modificationText.set('opacity', 0);
+    };
+    shape.on({
+      moving: onMoving,
+      moved: onMoved,
+      rotating: onRotating,
+      rotated: onRotated,
+    });
 
     // Anchor points
     const east = this.makeAnchorPoint('east');
@@ -55,30 +122,37 @@ export default class LinkableShape {
       southwest,
     };
 
-    // Events
-    this.shape.on('mouseover', () => {
-      this.toggleAnchorsOpacity(1);
-    });
-    this.shape.on('mouseout', () => {
-      this.toggleAnchorsOpacity(0);
-    });
-    this.shape.on('moving', () => {
-      this.refreshAnchorsPosition(false);
-    });
-    this.shape.on('moved', () => {
-      this.refreshAnchorsPosition(true);
-    });
-    this.shape.on('rotating', () => {
-      this.refreshAnchorsPosition(false);
-    });
-    this.shape.on('rotated', () => {
-      this.refreshAnchorsPosition(true);
-    });
-    this.shape.on('scaling', () => {
-      this.refreshAnchorsPosition(false);
-    });
-    this.shape.on('scaled', () => {
-      this.refreshAnchorsPosition(true);
+    // Events related to anchors
+    shape.on({
+      selected: () => {
+        this.toggleAnchorsOpacity(0);
+      },
+      mouseover: () => {
+        if (this.canvas.getActiveObject() !== this.shape) {
+          this.toggleAnchorsOpacity(1);
+        }
+      },
+      mouseout: () => {
+        this.toggleAnchorsOpacity(0);
+      },
+      moving: () => {
+        this.refreshAnchorsPosition(false);
+      },
+      moved: () => {
+        this.refreshAnchorsPosition(true);
+      },
+      rotating: () => {
+        this.refreshAnchorsPosition(false);
+      },
+      rotated: () => {
+        this.refreshAnchorsPosition(true);
+      },
+      scaling: () => {
+        this.refreshAnchorsPosition(false);
+      },
+      scaled: () => {
+        this.refreshAnchorsPosition(true);
+      },
     });
   }
 
@@ -87,8 +161,10 @@ export default class LinkableShape {
       canvas,
       shape,
       anchors,
+      modBox,
     } = this;
     canvas.add(shape);
+    canvas.add(modBox);
     canvas.add(anchors.east);
     canvas.bringForward(anchors.east, true);
     canvas.add(anchors.west);
@@ -267,11 +343,9 @@ export default class LinkableShape {
     ap.cardinal = cardinal;
     ap.on('mouseover', () => {
       ap.toggleOpacity(1);
-      // ap.set('stroke', '#55f');
     });
     ap.on('mouseout', () => {
       ap.toggleOpacity(0);
-      // ap.set('stroke', '#666');
     });
     ap.on('mousedblclick', () => {
       const { canvas } = this;
