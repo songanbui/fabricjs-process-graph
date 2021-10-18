@@ -1,6 +1,6 @@
 import LinkableShape from './LinkableShape.js';
 
-const { fabric } = window;
+const { fabric, _ } = window;
 
 export default class Container extends LinkableShape {
   /**
@@ -40,8 +40,9 @@ export default class Container extends LinkableShape {
       originX: 'center',
       originY: 'center',
     });
-    const newOptions = options;
+    const newOptions = _.cloneDeep(_.omit(options, ['canvas', 'shape']));
+    newOptions.canvas = options.canvas;
     newOptions.shape = group;
-    super(options);
+    super(newOptions);
   }
 }
