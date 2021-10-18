@@ -1,0 +1,22 @@
+{
+  "name": "fabricjs-process-graph",
+  "description": "",
+  "main": "demo/index.js",
+  "authors": [
+    "Song An BUI"
+  ],
+  "license": "MIT",
+  "homepage": "https://github.com/songanbui/fabricjs-process-graph",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "fabric.js": "fabric#^4.5.0",
+    "lodash": "^4.17.21"
+  }
+}

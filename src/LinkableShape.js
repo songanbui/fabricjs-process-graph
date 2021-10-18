@@ -2,15 +2,15 @@ import Link from './Link.js';
 
 const { fabric } = window;
 
-/**
- * A LinkableShape is any Fabric.Object shape on which anchors are appended so that multiple Link can be connected to it.
- * @param {Object}          options
- *
- * @param {Fabric.Canvas}   options.canvas - Fabric canvas
- * @param {String}          options.id - Unique identifier
- *
- */
 export default class LinkableShape {
+  /**
+   * A LinkableShape is any Fabric.Object shape on which anchors are appended so that multiple Link can be connected to it.
+   * @param {Object}          options
+   *
+   * @param {Fabric.Canvas}   options.canvas - Fabric canvas
+   * @param {String}          options.id - Unique identifier
+   *
+   */
   constructor(options) {
     const {
       id,
