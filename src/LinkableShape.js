@@ -28,23 +28,31 @@ export default class LinkableShape {
       top,
       hasBorders: true,
       hasControls: true,
-      originX: 'center',
-      originY: 'center',
+      originX: 'left',
+      originY: 'top',
       id,
       angle: angle || 0,
     });
-    this.shape.type = 'connectableShape';
+    this.shape.type = 'linkableShape';
 
     // Anchor points
     const east = this.makeAnchorPoint('east');
     const west = this.makeAnchorPoint('west');
     const north = this.makeAnchorPoint('north');
     const south = this.makeAnchorPoint('south');
+    const northeast = this.makeAnchorPoint('northeast');
+    const northwest = this.makeAnchorPoint('northwest');
+    const southeast = this.makeAnchorPoint('southeast');
+    const southwest = this.makeAnchorPoint('southwest');
     this.anchors = this.shape.anchors = {
       east,
       west,
       north,
       south,
+      northeast,
+      northwest,
+      southeast,
+      southwest,
     };
 
     // Events
@@ -89,6 +97,14 @@ export default class LinkableShape {
     canvas.bringForward(anchors.north, true);
     canvas.add(anchors.south);
     canvas.bringForward(anchors.south, true);
+    canvas.add(anchors.northeast);
+    canvas.bringForward(anchors.northeast, true);
+    canvas.add(anchors.northwest);
+    canvas.bringForward(anchors.northwest, true);
+    canvas.add(anchors.southeast);
+    canvas.bringForward(anchors.southeast, true);
+    canvas.add(anchors.southwest);
+    canvas.bringForward(anchors.southwest, true);
     this.refreshAnchorsPosition(true);
 
     return this;
@@ -99,6 +115,10 @@ export default class LinkableShape {
     this.setAnchorPositionRelativeToRectangle('west', this.shape, commit);
     this.setAnchorPositionRelativeToRectangle('south', this.shape, commit);
     this.setAnchorPositionRelativeToRectangle('north', this.shape, commit);
+    this.setAnchorPositionRelativeToRectangle('northeast', this.shape, commit);
+    this.setAnchorPositionRelativeToRectangle('northwest', this.shape, commit);
+    this.setAnchorPositionRelativeToRectangle('southeast', this.shape, commit);
+    this.setAnchorPositionRelativeToRectangle('southwest', this.shape, commit);
   }
 
   setAnchorPositionRelativeToRectangle(cardinal, commit) {
@@ -110,30 +130,42 @@ export default class LinkableShape {
       case 'east': {
         left = (shape.aCoords.tr.x + shape.aCoords.br.x) / 2;
         top = (shape.aCoords.tr.y + shape.aCoords.br.y) / 2;
-        // left = shape.left + shape.width/2;
-        // top = shape.top;
         break;
       }
       case 'west': {
         left = (shape.aCoords.tl.x + shape.aCoords.bl.x) / 2;
         top = (shape.aCoords.tl.y + shape.aCoords.bl.y) / 2;
-        // left = shape.left - shape.width/2;
-        // top = shape.top;
         break;
       }
       case 'north': {
         left = (shape.aCoords.tl.x + shape.aCoords.tr.x) / 2;
         top = (shape.aCoords.tl.y + shape.aCoords.tr.y) / 2;
-        // left = shape.left;
-        // top = shape.top - shape.height/2;
         break;
       }
-      case 'south':
-      default: {
+      case 'south': {
         left = (shape.aCoords.bl.x + shape.aCoords.br.x) / 2;
         top = (shape.aCoords.bl.y + shape.aCoords.br.y) / 2;
-        // left = shape.left;
-        // top = shape.top + shape.height/2;
+        break;
+      }
+      case 'northeast': {
+        left = shape.aCoords.tl.x;
+        top = shape.aCoords.tl.y;
+        break;
+      }
+      case 'northwest': {
+        left = shape.aCoords.tr.x;
+        top = shape.aCoords.tr.y;
+        break;
+      }
+      case 'southeast': {
+        left = shape.aCoords.bl.x;
+        top = shape.aCoords.bl.y;
+        break;
+      }
+      case 'southwest':
+      default: {
+        left = shape.aCoords.br.x;
+        top = shape.aCoords.br.y;
         break;
       }
     }
@@ -149,11 +181,19 @@ export default class LinkableShape {
       west,
       north,
       south,
+      northeast,
+      southeast,
+      northwest,
+      southwest,
     } = this.anchors;
     east.toggleOpacity(opacity);
     west.toggleOpacity(opacity);
     north.toggleOpacity(opacity);
     south.toggleOpacity(opacity);
+    northeast.toggleOpacity(opacity);
+    southeast.toggleOpacity(opacity);
+    northwest.toggleOpacity(opacity);
+    southwest.toggleOpacity(opacity);
   }
 
   makeAnchorPoint(cardinal) {
@@ -165,24 +205,44 @@ export default class LinkableShape {
     } = this;
     switch (cardinal) {
       case 'east': {
-        left = shape.left + shape.width / 2;
-        ({ top } = shape.top);
+        left = (shape.aCoords.tr.x + shape.aCoords.br.x) / 2;
+        top = (shape.aCoords.tr.y + shape.aCoords.br.y) / 2;
         break;
       }
       case 'west': {
-        left = shape.left - shape.width / 2;
-        ({ top } = shape.top);
+        left = (shape.aCoords.tl.x + shape.aCoords.bl.x) / 2;
+        top = (shape.aCoords.tl.y + shape.aCoords.bl.y) / 2;
         break;
       }
       case 'north': {
-        ({ left } = shape.left);
-        top = shape.top - shape.height / 2;
+        left = (shape.aCoords.tl.x + shape.aCoords.tr.x) / 2;
+        top = (shape.aCoords.tl.y + shape.aCoords.tr.y) / 2;
         break;
       }
-      case 'south':
+      case 'south': {
+        left = (shape.aCoords.bl.x + shape.aCoords.br.x) / 2;
+        top = (shape.aCoords.bl.y + shape.aCoords.br.y) / 2;
+        break;
+      }
+      case 'northeast': {
+        left = shape.aCoords.tl.x;
+        top = shape.aCoords.tl.y;
+        break;
+      }
+      case 'northwest': {
+        left = shape.aCoords.tr.x;
+        top = shape.aCoords.tr.y;
+        break;
+      }
+      case 'southeast': {
+        left = shape.aCoords.bl.x;
+        top = shape.aCoords.bl.y;
+        break;
+      }
+      case 'southwest':
       default: {
-        ({ left } = shape.left);
-        top = shape.top + shape.height / 2;
+        left = shape.aCoords.br.x;
+        top = shape.aCoords.br.y;
         break;
       }
     }
@@ -190,10 +250,10 @@ export default class LinkableShape {
     const ap = new fabric.Circle({
       left,
       top,
-      strokeWidth: 4,
-      radius: 8,
-      fill: '#fff',
-      stroke: '#666',
+      strokeWidth: 2,
+      radius: 6,
+      fill: '#78befa', // 42a2da d5e8f2
+      stroke: '#78befa',
       originX: 'center',
       originY: 'center',
       hasBorders: false,
