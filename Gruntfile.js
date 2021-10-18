@@ -1,4 +1,4 @@
-module.exports = function (grunt) {
+module.exports = function Gruntfile(grunt) {
   grunt.initConfig({
     pkg: grunt.file.readJSON('package.json'),
     browserify: {
@@ -47,11 +47,15 @@ module.exports = function (grunt) {
         },
       },
     },
+    eslint: {
+      files: ['Gruntfile.js', 'src/**/*.js', 'test/**/*.js'],
+    },
   });
 
   grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-contrib-jshint');
   grunt.loadNpmTasks('grunt-browserify');
+  grunt.loadNpmTasks('grunt-eslint');
 
-  grunt.registerTask('default', ['jshint', 'browserify:dist', 'uglify']);
+  grunt.registerTask('default', ['jshint', 'eslint', 'browserify:dist', 'uglify']);
 };

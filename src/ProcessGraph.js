@@ -30,7 +30,7 @@ export default class ProcessGraph {
     }
 
     // fabric.Object.prototype.originX = fabric.Object.prototype.originY = 'center';
-    fabric.Object.prototype.toggleOpacity = function (opacity, timeout) {
+    fabric.Object.prototype.toggleOpacity = function toggleOpacity(opacity, timeout) {
       this.animate('opacity', opacity, {
         duration: timeout !== undefined ? timeout : 300,
         onChange: this.canvas.renderAll.bind(this.canvas),
