@@ -363,7 +363,7 @@ export default class LinkableShape {
       ap.toggleOpacity(0);
     });
 
-    ap.on('mouseup', (options) => {
+    ap.on('mousedown', (options) => {
       switch (options.button) {
         case 3:
           this._onAnchorRightClick.call(this, options);

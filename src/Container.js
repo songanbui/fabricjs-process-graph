@@ -163,6 +163,10 @@ export default class Container extends LinkableShape {
   _onAnchorLeftClick(options) {
     const ap = options.target;
     const { canvas } = this;
+
+    // Disable the multi selection when moving mouse
+    this.canvas.selection = false;
+
     const newLink = new Link({
       canvas,
       start: {
@@ -186,6 +190,9 @@ export default class Container extends LinkableShape {
     canvas.on('mouse:move', onMouseMove);
 
     const onMouseClick = () => {
+      // Enable back the multi selection when moving mouse
+      this.canvas.selection = true;
+
       newLink.arrowHead.fire('moved');
       newLink.arrowHead.fire('mouseup');
       canvas.off('mouse:move', onMouseMove);
