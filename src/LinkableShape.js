@@ -1,5 +1,3 @@
-import Link from './Link.js';
-
 const { fabric } = window;
 
 export default class LinkableShape {
@@ -224,24 +222,24 @@ export default class LinkableShape {
         break;
       }
       case 'northeast': {
-        left = shape.aCoords.tl.x;
-        top = shape.aCoords.tl.y;
-        break;
-      }
-      case 'northwest': {
         left = shape.aCoords.tr.x;
         top = shape.aCoords.tr.y;
         break;
       }
+      case 'northwest': {
+        left = shape.aCoords.tl.x;
+        top = shape.aCoords.tl.y;
+        break;
+      }
       case 'southeast': {
-        left = shape.aCoords.bl.x;
-        top = shape.aCoords.bl.y;
+        left = shape.aCoords.br.x;
+        top = shape.aCoords.br.y;
         break;
       }
       case 'southwest':
       default: {
-        left = shape.aCoords.br.x;
-        top = shape.aCoords.br.y;
+        left = shape.aCoords.bl.x;
+        top = shape.aCoords.bl.y;
         break;
       }
     }
@@ -301,24 +299,24 @@ export default class LinkableShape {
         break;
       }
       case 'northeast': {
-        left = shape.aCoords.tl.x;
-        top = shape.aCoords.tl.y;
-        break;
-      }
-      case 'northwest': {
         left = shape.aCoords.tr.x;
         top = shape.aCoords.tr.y;
         break;
       }
+      case 'northwest': {
+        left = shape.aCoords.tl.x;
+        top = shape.aCoords.tl.y;
+        break;
+      }
       case 'southeast': {
-        left = shape.aCoords.bl.x;
-        top = shape.aCoords.bl.y;
+        left = shape.aCoords.br.x;
+        top = shape.aCoords.br.y;
         break;
       }
       case 'southwest':
       default: {
-        left = shape.aCoords.br.x;
-        top = shape.aCoords.br.y;
+        left = shape.aCoords.bl.x;
+        top = shape.aCoords.bl.y;
         break;
       }
     }
@@ -347,39 +345,27 @@ export default class LinkableShape {
     ap.on('mouseout', () => {
       ap.toggleOpacity(0);
     });
-    ap.on('mousedblclick', () => {
-      const { canvas } = this;
-      const newLink = new Link({
-        canvas,
-        start: {
-          x: ap.left,
-          y: ap.top,
-        },
-        end: {
-          x: ap.left,
-          y: ap.top,
-        },
-      });
-      newLink.inject(canvas);
-      newLink.connectLink('from', ap.shapeId, ap.cardinal);
-      newLink.arrowHead.fire('mousedown');
 
-      const onMouseMove = (event) => {
-        newLink.arrowHead.left = event.pointer.x;
-        newLink.arrowHead.top = event.pointer.y;
-        newLink.arrowHead.fire('moving');
-      };
-      canvas.on('mouse:move', onMouseMove);
-
-      const onMouseClick = () => {
-        newLink.arrowHead.fire('moved');
-        newLink.arrowHead.fire('mouseup');
-        canvas.off('mouse:move', onMouseMove);
-        canvas.off('mouse:up', onMouseClick);
-        newLink.resetCurvature();
-      };
-      canvas.on('mouse:up', onMouseClick);
+    let timer; // workaround to differentiate single and double click
+    ap.on('mousedown', (options) => {
+      const event = options.e;
+      if (event.detail === 1) {
+        timer = setTimeout(() => {
+          this._onAnchorClick.call(this, options);
+        }, 200);
+      }
+    });
+    ap.on('mousedblclick', (options) => {
+      clearTimeout(timer);
+      this._onAnchorDoubleClick.call(this, options);
     });
     return ap;
   }
+
+  // Should be implemented by Extending Classes
+  /* eslint-disable class-methods-use-this */
+  _onAnchorClick(/* options */) {}
+
+  _onAnchorDoubleClick(/* options */) {}
+  /* eslint-disable class-methods-use-this */
 }

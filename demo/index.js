@@ -19,7 +19,7 @@ const main = function main() {
   new Container({
     id: 'r1',
     canvas,
-    left: 200,
+    left: 100,
     top: 50,
     angle: 0,
     label: 'Set CPU to MB socket',
@@ -27,8 +27,8 @@ const main = function main() {
   new Container({
     id: 'r2',
     canvas,
-    left: 600,
-    top: 50,
+    left: 100,
+    top: 170,
     angle: 0,
     label: 'Screw MB to Case',
   }).inject();

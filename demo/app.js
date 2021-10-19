@@ -6,6 +6,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use('/demo', express.static(path.join(__dirname)));
 app.use('/index.js', express.static(path.join(__dirname, '/../index.js')));
+app.use('/src', express.static(path.join(__dirname, '/../src')));
 app.use('/bower_components', express.static(path.join(__dirname, '/../bower_components')));
 app.use('/dist', express.static(path.join(__dirname, '/../dist')));
 
