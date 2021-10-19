@@ -1,14 +1,17 @@
 {
   "name": "fabricjs-process-graph",
   "version": "1.0.0",
-  "dependencies": {},
+  "dependencies": {
+    "express": "^4.17.1"
+  },
   "main": "demo/index.js",
   "directories": {
     "lib": "lib"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "build": "babel src -d dist"
+    "build": "babel src -d dist",
+    "demo": "node demo/app.js"
   },
   "repository": {
     "type": "git",
