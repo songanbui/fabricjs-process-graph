@@ -64,6 +64,7 @@ export default class Link {
 
     // Control point and lines for the quadratic curve
     const controlPoint = this.controlPoint = new fabric.Circle({
+      objectCaching: false,
       left: pathCoords.Q.x1,
       top: pathCoords.Q.y1,
       strokeWidth: 1,
@@ -89,6 +90,7 @@ export default class Link {
       this.bringToFront();
     });
     const controlLineOpts = {
+      objectCaching: false,
       strokeDashArray: [5, 5],
       strokeWidth: 1,
       stroke: '#78befa',
@@ -107,6 +109,7 @@ export default class Link {
 
     // Mask for showing if connection is valid
     const isValidMaskOpts = {
+      objectCaching: false,
       left: pathCoords.Q.x2,
       top: pathCoords.Q.y2,
       strokeWidth: 1,
@@ -124,6 +127,7 @@ export default class Link {
 
     // End point (arrowHead)
     const arrowHeadOpts = {
+      objectCaching: false,
       width: 10,
       height: 10,
       left: pathCoords.Q.x2,
@@ -143,6 +147,7 @@ export default class Link {
       this.updatePath('to', arrowHead.left, arrowHead.top, false);
       this.isValidMask.left = arrowHead.left;
       this.isValidMask.top = arrowHead.top;
+      this.isValidMask.setCoords();
       this.isValidMask.set('opacity', 0);
 
       // Check if intersects with anchor
@@ -196,6 +201,7 @@ export default class Link {
 
     // Start point (arrowTail)
     const arrowTailOpts = {
+      objectCaching: false,
       width: 10,
       height: 10,
       left: pathCoords.M.x,
@@ -215,6 +221,7 @@ export default class Link {
       this.updatePath('from', arrowTail.left, arrowTail.top, false);
       this.isValidMask.left = arrowTail.left;
       this.isValidMask.top = arrowTail.top;
+      this.isValidMask.setCoords();
       this.isValidMask.set('opacity', 0);
 
       // Check if intersects with anchor
@@ -341,6 +348,7 @@ export default class Link {
     } = this;
     controlPoint.left = (path.path[0][1] + path.path[1][3]) / 2;
     controlPoint.top = (path.path[0][2] + path.path[1][4]) / 2;
+    controlPoint.setCoords();
     controlPoint.fire('moved');
   }
 
@@ -443,9 +451,21 @@ export default class Link {
   toggleAllAnchorsOpacity(opacity) {
     const anchors = this.canvas.getObjects()
       .filter((o) => o.type === 'anchor');
+    const promises = [];
+    const promiseFactory = function (anchor) {
+      return function (resolve) {
+        anchor.animate('opacity', opacity, {
+          duration: 300,
+          onChange: resolve,
+        });
+      };
+    };
     for (let a = 0; a < anchors.length; a += 1) {
-      anchors[a].toggleOpacity(opacity);
+      promises.push(new Promise(promiseFactory(anchors[a])));
     }
+    Promise.all(promises).then(() => {
+      this.canvas.renderAll();
+    });
   }
 
   onLinkMouseOver() {

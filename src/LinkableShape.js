@@ -70,6 +70,7 @@ export default class LinkableShape {
       const yCoords = [shape.aCoords.tl.y, shape.aCoords.tr.y, shape.aCoords.bl.y, shape.aCoords.br.y];
       modification.left = (Math.min(...xCoords) + Math.max(...xCoords)) / 2;
       modification.top = Math.round(Math.max(...yCoords) + 30);
+      modification.setCoords();
       modificationBox.set('opacity', 0.7);
       modificationText.set('opacity', 1);
       modificationText.set('text', `${Math.round(x)}, ${Math.round(y)}`);
@@ -84,6 +85,7 @@ export default class LinkableShape {
       const yCoords = [shape.aCoords.tl.y, shape.aCoords.tr.y, shape.aCoords.bl.y, shape.aCoords.br.y];
       modification.left = (Math.min(...xCoords) + Math.max(...xCoords)) / 2;
       modification.top = Math.round(Math.max(...yCoords) + 30);
+      modification.setCoords();
       modificationBox.set('opacity', 0.7);
       modificationText.set('opacity', 1);
       modificationText.set('text', `${Math.round(shape.angle > 180 ? shape.angle - 360 : shape.angle)}°`);
@@ -101,14 +103,14 @@ export default class LinkableShape {
     });
 
     // Anchor points
-    const east = this.makeAnchorPoint('east');
-    const west = this.makeAnchorPoint('west');
-    const north = this.makeAnchorPoint('north');
-    const south = this.makeAnchorPoint('south');
-    const northeast = this.makeAnchorPoint('northeast');
-    const northwest = this.makeAnchorPoint('northwest');
-    const southeast = this.makeAnchorPoint('southeast');
-    const southwest = this.makeAnchorPoint('southwest');
+    const east = this._makeAnchorPoint('east');
+    const west = this._makeAnchorPoint('west');
+    const north = this._makeAnchorPoint('north');
+    const south = this._makeAnchorPoint('south');
+    const northeast = this._makeAnchorPoint('northeast');
+    const northwest = this._makeAnchorPoint('northwest');
+    const southeast = this._makeAnchorPoint('southeast');
+    const southwest = this._makeAnchorPoint('southwest');
     this.anchors = this.shape.anchors = {
       east,
       west,
@@ -184,18 +186,52 @@ export default class LinkableShape {
     return this;
   }
 
-  refreshAnchorsPosition(commit) {
-    this.setAnchorPositionRelativeToRectangle('east', commit);
-    this.setAnchorPositionRelativeToRectangle('west', this.shape, commit);
-    this.setAnchorPositionRelativeToRectangle('south', this.shape, commit);
-    this.setAnchorPositionRelativeToRectangle('north', this.shape, commit);
-    this.setAnchorPositionRelativeToRectangle('northeast', this.shape, commit);
-    this.setAnchorPositionRelativeToRectangle('northwest', this.shape, commit);
-    this.setAnchorPositionRelativeToRectangle('southeast', this.shape, commit);
-    this.setAnchorPositionRelativeToRectangle('southwest', this.shape, commit);
+  move(options) {
+    if (options.x) this.shape.set('top', options.x);
+    if (options.y) this.shape.set('left', options.y);
+    this.shape.setCoords();
+    this.refreshAnchorsPosition();
   }
 
-  setAnchorPositionRelativeToRectangle(cardinal, commit) {
+  rotate(angle) {
+    this.shape.rotate(angle);
+    this.shape.setCoords();
+    this.refreshAnchorsPosition();
+  }
+
+  refreshAnchorsPosition(commit) {
+    this._setAnchorPositionRelativeToRectangle('east', commit);
+    this._setAnchorPositionRelativeToRectangle('west', this.shape, commit);
+    this._setAnchorPositionRelativeToRectangle('south', this.shape, commit);
+    this._setAnchorPositionRelativeToRectangle('north', this.shape, commit);
+    this._setAnchorPositionRelativeToRectangle('northeast', this.shape, commit);
+    this._setAnchorPositionRelativeToRectangle('northwest', this.shape, commit);
+    this._setAnchorPositionRelativeToRectangle('southeast', this.shape, commit);
+    this._setAnchorPositionRelativeToRectangle('southwest', this.shape, commit);
+  }
+
+  toggleAnchorsOpacity(opacity) {
+    const {
+      east,
+      west,
+      north,
+      south,
+      northeast,
+      southeast,
+      northwest,
+      southwest,
+    } = this.anchors;
+    east.toggleOpacity(opacity);
+    west.toggleOpacity(opacity);
+    north.toggleOpacity(opacity);
+    south.toggleOpacity(opacity);
+    northeast.toggleOpacity(opacity);
+    southeast.toggleOpacity(opacity);
+    northwest.toggleOpacity(opacity);
+    southwest.toggleOpacity(opacity);
+  }
+
+  _setAnchorPositionRelativeToRectangle(cardinal, commit) {
     let left;
     let top;
     const { shape } = this;
@@ -245,32 +281,12 @@ export default class LinkableShape {
     }
     ap.left = left;
     ap.top = top;
+    ap.setCoords();
 
     ap.fire(commit ? 'pg:position:modified' : 'pg:position:modifying');
   }
 
-  toggleAnchorsOpacity(opacity) {
-    const {
-      east,
-      west,
-      north,
-      south,
-      northeast,
-      southeast,
-      northwest,
-      southwest,
-    } = this.anchors;
-    east.toggleOpacity(opacity);
-    west.toggleOpacity(opacity);
-    north.toggleOpacity(opacity);
-    south.toggleOpacity(opacity);
-    northeast.toggleOpacity(opacity);
-    southeast.toggleOpacity(opacity);
-    northwest.toggleOpacity(opacity);
-    southwest.toggleOpacity(opacity);
-  }
-
-  makeAnchorPoint(cardinal) {
+  _makeAnchorPoint(cardinal) {
     let left;
     let top;
     const {
@@ -322,6 +338,7 @@ export default class LinkableShape {
     }
 
     const ap = new fabric.Circle({
+      objectCaching: false,
       left,
       top,
       strokeWidth: 2,
@@ -352,7 +369,7 @@ export default class LinkableShape {
       if (event.detail === 1) {
         timer = setTimeout(() => {
           this._onAnchorClick.call(this, options);
-        }, 200);
+        }, 300);
       }
     });
     ap.on('mousedblclick', (options) => {

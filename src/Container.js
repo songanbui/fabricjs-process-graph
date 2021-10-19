@@ -10,7 +10,9 @@ export default class Container extends LinkableShape {
    *
    * @param {Fabric.Canvas}   options.canvas - Fabric canvas
    * @param {String}          options.id - Unique identifier
-   *
+   * @param {Number}          options.width
+   * @param {Number}          options.height
+   * @param {String}          options.label
    */
   constructor(options) {
     const rect = new fabric.Rect({
@@ -23,8 +25,8 @@ export default class Container extends LinkableShape {
       fill: '#fff',
       rx: 10,
       ry: 10,
-      width: 200,
-      height: 100,
+      width: options.width ? options.width : 200,
+      height: options.height ? options.height : 100,
     });
     const text = new fabric.Textbox(options.label, {
       left: rect.width / 2,
@@ -75,93 +77,72 @@ export default class Container extends LinkableShape {
     const ap = options.target;
     const { cardinal } = ap;
     const spacing = 50;
-    const newOptions = {};
 
+    const nextContainer = new Container({
+      canvas,
+      id: `${id}_next_${cardinal}_${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
+      left,
+      top,
+      angle,
+      label: `${id}_next_${cardinal}`,
+    });
+    nextContainer.inject();
+
+    const newOptions = {};
+    let targetCardinal;
     switch (cardinal) {
       case 'east': {
-        newOptions.id = `${id}_next_${cardinal}`;
-        newOptions.label = `${id}_next_${cardinal}`;
-        newOptions.cardinal = 'west';
-        newOptions.top = top;
-        newOptions.left = left + width + spacing;
-        newOptions.angle = angle;
+        targetCardinal = 'west';
+        newOptions.x = top;
+        newOptions.y = left + width + spacing;
         break;
       }
       case 'west': {
-        newOptions.id = `${id}_next_${cardinal}`;
-        newOptions.label = `${id}_next_${cardinal}`;
-        newOptions.cardinal = 'east';
-        newOptions.top = top;
-        newOptions.left = left - width - spacing;
-        newOptions.angle = angle;
+        targetCardinal = 'east';
+        newOptions.x = top;
+        newOptions.y = left - width - spacing;
         break;
       }
       case 'north': {
-        newOptions.id = `${id}_next_${cardinal}`;
-        newOptions.label = `${id}_next_${cardinal}`;
-        newOptions.cardinal = 'south';
-        newOptions.top = top - height - spacing;
-        newOptions.left = left;
-        newOptions.angle = angle;
+        targetCardinal = 'south';
+        newOptions.x = top - height - spacing;
+        newOptions.y = left;
         break;
       }
       case 'south': {
-        newOptions.id = `${id}_next_${cardinal}`;
-        newOptions.label = `${id}_next_${cardinal}`;
-        newOptions.cardinal = 'north';
-        newOptions.top = top + height + spacing;
-        newOptions.left = left;
-        newOptions.angle = angle;
+        targetCardinal = 'north';
+        newOptions.x = top + height + spacing;
+        newOptions.y = left;
         break;
       }
       case 'northeast': {
-        newOptions.id = `${id}_next_${cardinal}`;
-        newOptions.label = `${id}_next_${cardinal}`;
-        newOptions.cardinal = 'southwest';
-        newOptions.top = top - height - spacing;
-        newOptions.left = left + width + spacing;
-        newOptions.angle = angle;
+        targetCardinal = 'southwest';
+        newOptions.x = top - height - spacing;
+        newOptions.y = left + width + spacing;
         break;
       }
       case 'northwest': {
-        newOptions.id = `${id}_next_${cardinal}`;
-        newOptions.label = `${id}_next_${cardinal}`;
-        newOptions.cardinal = 'southeast';
-        newOptions.top = top - height - spacing;
-        newOptions.left = left - width - spacing;
-        newOptions.angle = angle;
+        targetCardinal = 'southeast';
+        newOptions.x = top - height - spacing;
+        newOptions.y = left - width - spacing;
         break;
       }
       case 'southeast': {
-        newOptions.id = `${id}_next_${cardinal}`;
-        newOptions.label = `${id}_next_${cardinal}`;
-        newOptions.cardinal = 'northwest';
-        newOptions.top = top + height + spacing;
-        newOptions.left = left + width + spacing;
-        newOptions.angle = angle;
+        targetCardinal = 'northwest';
+        newOptions.x = top + height + spacing;
+        newOptions.y = left + width + spacing;
         break;
       }
       case 'southwest':
       default: {
-        newOptions.id = `${id}_next_${cardinal}`;
-        newOptions.label = `${id}_next_${cardinal}`;
-        newOptions.cardinal = 'northeast';
-        newOptions.top = top + height + spacing;
-        newOptions.left = left - width - spacing;
-        newOptions.angle = angle;
+        targetCardinal = 'northeast';
+        newOptions.x = top + height + spacing;
+        newOptions.y = left - width - spacing;
         break;
       }
     }
-
-    const nextContainer = new Container({
-      canvas,
-      id: newOptions.id,
-      left: newOptions.left,
-      top: newOptions.top,
-      angle: newOptions.angle,
-      label: newOptions.label,
-    });
-    nextContainer.inject();
+    nextContainer.move(newOptions);
+    // nextContainer.rotate(angle);
 
     const newLink = new Link({
       canvas,
@@ -170,13 +151,13 @@ export default class Container extends LinkableShape {
         y: ap.top,
       },
       end: {
-        x: nextContainer.anchors[newOptions.cardinal].left,
-        y: nextContainer.anchors[newOptions.cardinal].top,
+        x: nextContainer.anchors[targetCardinal].left,
+        y: nextContainer.anchors[targetCardinal].top,
       },
     });
     newLink.inject(canvas);
     newLink.connectLink('from', ap.shapeId, ap.cardinal);
-    newLink.connectLink('to', nextContainer.anchors[newOptions.cardinal].shapeId, nextContainer.anchors[newOptions.cardinal].cardinal);
+    newLink.connectLink('to', nextContainer.anchors[targetCardinal].shapeId, nextContainer.anchors[targetCardinal].cardinal);
   }
 
   _onAnchorDoubleClick(options) {
