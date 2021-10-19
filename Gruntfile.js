@@ -38,7 +38,7 @@ module.exports = function Gruntfile(grunt) {
       files: ['Gruntfile.js', 'src/**/*.js', 'test/**/*.js'],
       options: {
         // options here to override JSHint defaults
-        esversion: '6',
+        esversion: '8',
         globals: {
           jQuery: true,
           console: true,

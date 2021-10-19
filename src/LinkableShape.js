@@ -363,26 +363,30 @@ export default class LinkableShape {
       ap.toggleOpacity(0);
     });
 
-    let timer; // workaround to differentiate single and double click
-    ap.on('mousedown', (options) => {
-      const event = options.e;
-      if (event.detail === 1) {
-        timer = setTimeout(() => {
-          this._onAnchorClick.call(this, options);
-        }, 300);
+    ap.on('mouseup', (options) => {
+      switch (options.button) {
+        case 3:
+          this._onAnchorRightClick.call(this, options);
+          break;
+        case 2:
+          this._onAnchorMiddleClick.call(this, options);
+          break;
+        case 1:
+        default:
+          this._onAnchorLeftClick.call(this, options);
+          break;
       }
-    });
-    ap.on('mousedblclick', (options) => {
-      clearTimeout(timer);
-      this._onAnchorDoubleClick.call(this, options);
     });
     return ap;
   }
 
   // Should be implemented by Extending Classes
   /* eslint-disable class-methods-use-this */
-  _onAnchorClick(/* options */) {}
+  _onAnchorLeftClick(/* options */) {}
 
-  _onAnchorDoubleClick(/* options */) {}
+  _onAnchorMiddleClick(/* options */) {}
+
+  _onAnchorRightClick(/* options */) {}
+
   /* eslint-disable class-methods-use-this */
 }

@@ -70,7 +70,7 @@ export default class Container extends LinkableShape {
     });
   }
 
-  _onAnchorClick(options) {
+  _onAnchorRightClick(options) {
     const {
       id, left, top, angle, canvas, width, height,
     } = this.shape;
@@ -160,7 +160,7 @@ export default class Container extends LinkableShape {
     newLink.connectLink('to', nextContainer.anchors[targetCardinal].shapeId, nextContainer.anchors[targetCardinal].cardinal);
   }
 
-  _onAnchorDoubleClick(options) {
+  _onAnchorLeftClick(options) {
     const ap = options.target;
     const { canvas } = this;
     const newLink = new Link({

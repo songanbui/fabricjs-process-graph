@@ -54,8 +54,6 @@ export default class Link {
       selectable: true,
       hasBorders: true,
       hasControls: false,
-      lockMovementX: true,
-      lockMovementY: true,
       perPixelTargetFind: true,
     };
     const pathStr = `M ${pathCoords.M.x} ${pathCoords.M.y} Q ${pathCoords.Q.x1}, ${pathCoords.Q.y1}, ${pathCoords.Q.x2}, ${pathCoords.Q.y2}`;
@@ -107,7 +105,7 @@ export default class Link {
     controlLine2.on('mouseover', this.onLinkMouseOver.bind(this));
     controlLine2.on('mouseout', this.onLinkMouseOut.bind(this));
 
-    // Mask for showing if connection is valid
+    // End point (arrowHead)
     const isValidMaskOpts = {
       objectCaching: false,
       left: pathCoords.Q.x2,
@@ -123,9 +121,6 @@ export default class Link {
       selectable: false,
       opacity: 0,
     };
-    this.isValidMask = new fabric.Circle(isValidMaskOpts);
-
-    // End point (arrowHead)
     const arrowHeadOpts = {
       objectCaching: false,
       width: 10,
@@ -143,52 +138,15 @@ export default class Link {
       hasControls: false,
     };
     const arrowHead = this.arrowHead = new fabric.Triangle(arrowHeadOpts);
+    this.isValidHeadConnectionMask = new fabric.Circle(isValidMaskOpts);
     arrowHead.on('moving', () => {
       this.updatePath('to', arrowHead.left, arrowHead.top, false);
-      this.isValidMask.left = arrowHead.left;
-      this.isValidMask.top = arrowHead.top;
-      this.isValidMask.setCoords();
-      this.isValidMask.set('opacity', 0);
-
-      // Check if intersects with anchor
-      const anchors = canvas.getObjects()
-        .filter((o) => o.type === 'anchor');
-      arrowHead.set('stroke', '#000');
-      for (let a = 0; a < anchors.length; a += 1) {
-        if (arrowHead.intersectsWithObject(anchors[a])) {
-          this.isValidMask.set('opacity', 0.5);
-          if (this.isValidConnection('to', anchors[a].shapeId, anchors[a].cardinal)) {
-            this.isValidMask.set({
-              stroke: '#57b857',
-              fill: '#57b857',
-            });
-            arrowHead.set('stroke', '#5f5');
-          } else {
-            this.isValidMask.set({
-              stroke: '#ea4f37',
-              fill: '#ea4f37',
-            });
-            arrowHead.set('stroke', '#ea4f37');
-          }
-        }
-      }
+      this._checkExtremityCanBeConnected('to');
     });
     arrowHead.on('moved', () => {
       this.updatePath('to', arrowHead.left, arrowHead.top, true);
-      this.isValidMask.set('opacity', 0);
-
-      // Check if intersects with anchor
-      const anchors = canvas.getObjects()
-        .filter((o) => o.type === 'anchor');
-      for (let a = 0; a < anchors.length; a += 1) {
-        if (arrowHead.intersectsWithObject(anchors[a])) {
-          this.connectLink('to', anchors[a].shapeId, anchors[a].cardinal);
-          arrowHead.set('stroke', '#000');
-        } else if (this.to && anchors[a] === this.to.shape.anchors[this.to.anchor]) {
-          // If this link was connected to this anchor and it doesn't intersect anymore
-          this.disconnectLink('to');
-        }
-      }
+      this.isValidHeadConnectionMask.set('opacity', 0);
+      this._connectDisconnectExtremity('to');
     });
     arrowHead.on('mousedown', () => {
       this.bringToFront();
@@ -217,53 +175,15 @@ export default class Link {
       hasControls: false,
     };
     const arrowTail = this.arrowTail = new fabric.Rect(arrowTailOpts);
+    this.isValidTailConnectionMask = new fabric.Circle(isValidMaskOpts);
     arrowTail.on('moving', () => {
       this.updatePath('from', arrowTail.left, arrowTail.top, false);
-      this.isValidMask.left = arrowTail.left;
-      this.isValidMask.top = arrowTail.top;
-      this.isValidMask.setCoords();
-      this.isValidMask.set('opacity', 0);
-
-      // Check if intersects with anchor
-      const anchors = canvas.getObjects()
-        .filter((o) => o.type === 'anchor');
-      arrowTail.set('stroke', '#000');
-      for (let a = 0; a < anchors.length; a += 1) {
-        if (arrowTail.intersectsWithObject(anchors[a])) {
-          this.isValidMask.set('opacity', 0.5);
-          if (this.isValidConnection('from', anchors[a].shapeId, anchors[a].cardinal)) {
-            this.isValidMask.set({
-              stroke: '#57b857',
-              fill: '#57b857',
-            });
-            arrowTail.set('stroke', '#5f5');
-          } else {
-            this.isValidMask.set({
-              stroke: '#ea4f37',
-              fill: '#ea4f37',
-            });
-            arrowTail.set('stroke', '#f55');
-          }
-        }
-      }
+      this._checkExtremityCanBeConnected('from');
     });
     arrowTail.on('moved', () => {
       this.updatePath('from', arrowTail.left, arrowTail.top, true);
-      this.isValidMask.set('opacity', 0);
-
-      // Check if intersects with anchor
-      const anchors = canvas.getObjects()
-        .filter((o) => o.type === 'anchor');
-      for (let a = 0; a < anchors.length; a += 1) {
-        if (arrowTail.intersectsWithObject(anchors[a])) {
-          this.connectLink('from', anchors[a].shapeId, anchors[a].cardinal);
-          // anchors[a].set('stroke', '#000');
-          arrowTail.set('stroke', '#000');
-        } else if (this.from && anchors[a] === this.from.shape.anchors[this.from.anchor]) {
-          // If this link was connected to this anchor and it doesn't intersect anymore
-          this.disconnectLink('from');
-        }
-      }
+      this.isValidTailConnectionMask.set('opacity', 0);
+      this._connectDisconnectExtremity('from');
     });
     arrowTail.on('mousedown', () => {
       this.bringToFront();
@@ -284,12 +204,14 @@ export default class Link {
       controlLine2,
       arrowHead,
       arrowTail,
-      isValidMask,
+      isValidTailConnectionMask,
+      isValidHeadConnectionMask,
     } = this;
     canvas.add(controlPoint);
     canvas.add(controlLine1);
     canvas.add(controlLine2);
-    canvas.add(isValidMask);
+    canvas.add(isValidTailConnectionMask);
+    canvas.add(isValidHeadConnectionMask);
     canvas.add(arrowHead);
     canvas.add(arrowTail);
 
@@ -388,6 +310,26 @@ export default class Link {
       newPath.on('mouseover', this.onLinkMouseOver.bind(this));
       newPath.on('mouseout', this.onLinkMouseOut.bind(this));
       newPath.on('mousedown', this.bringToFront.bind(this));
+      newPath.on('moving', this.onLinkMoving.bind(this));
+      newPath.on('moved', this.onLinkMoved.bind(this));
+      const toBind = [
+        this.arrowHead,
+        this.arrowTail,
+        this.controlPoint,
+        this.controlLine1,
+        this.controlLine2,
+      ];
+      const bossTransform = newPath.calcTransformMatrix();
+      const invertedBossTransform = fabric.util.invertTransform(bossTransform);
+      toBind.forEach((o) => {
+        const desiredTransform = fabric.util.multiplyTransformMatrices(
+          invertedBossTransform,
+          o.calcTransformMatrix(),
+        );
+        // eslint-disable-next-line no-param-reassign
+        o.relationship = desiredTransform;
+      });
+
       this.path = newPath;
     } else {
       this.path.set('path', [
@@ -451,21 +393,29 @@ export default class Link {
   toggleAllAnchorsOpacity(opacity) {
     const anchors = this.canvas.getObjects()
       .filter((o) => o.type === 'anchor');
-    const promises = [];
-    const promiseFactory = function (anchor) {
-      return function (resolve) {
-        anchor.animate('opacity', opacity, {
-          duration: 300,
-          onChange: resolve,
-        });
-      };
-    };
+
+    // const promises = [];
+    // const promiseFactory = function (anchor) {
+    //   return function (resolve) {
+    //     anchor.animate('opacity', opacity, {
+    //       duration: 300,
+    //       onChange: resolve,
+    //     });
+    //   };
+    // };
+    // for (let a = 0; a < anchors.length; a += 1) {
+    //   if (lock !== undefined) anchors[a].lockOpacity = lock;
+    //   promises.push(new Promise(promiseFactory(anchors[a])));
+    // }
+    // Promise.all(promises).then(() => {
+    //   this.canvas.renderAll();
+    // });
+
     for (let a = 0; a < anchors.length; a += 1) {
-      promises.push(new Promise(promiseFactory(anchors[a])));
+      // if (lock !== undefined) anchors[a].lockOpacity = lock;
+      anchors[a].set('opacity', opacity);
     }
-    Promise.all(promises).then(() => {
-      this.canvas.renderAll();
-    });
+    this.canvas.renderAll();
   }
 
   onLinkMouseOver() {
@@ -478,5 +428,150 @@ export default class Link {
     this.controlPoint.toggleOpacity(0);
     this.controlLine1.toggleOpacity(0);
     this.controlLine2.toggleOpacity(0);
+  }
+
+  onLinkMoving() {
+    // Move start, end, control points altogether with the Path
+    const toUpdate = [
+      this.arrowHead,
+      this.arrowTail,
+      this.controlPoint,
+      this.controlLine1,
+      this.controlLine2,
+    ];
+    toUpdate.forEach((o) => {
+      if (!o.relationship) {
+        return;
+      }
+      const { relationship } = o;
+      const newTransform = fabric.util.multiplyTransformMatrices(
+        this.path.calcTransformMatrix(),
+        relationship,
+      );
+      const opt = fabric.util.qrDecompose(newTransform);
+      o.set({
+        flipX: false,
+        flipY: false,
+      });
+      o.setPositionByOrigin(
+        { x: opt.translateX, y: opt.translateY },
+        'center',
+        'center',
+      );
+      o.set(opt);
+      o.setCoords();
+    });
+
+    // Finally, check the start or end points can be connected.
+    this._checkExtremityCanBeConnected('from');
+    this._checkExtremityCanBeConnected('to');
+  }
+
+  onLinkMoved() {
+    // Reupdate the Path according to the new coordinates of all elements
+    const pathCoords = {
+      M: {
+        x: this.arrowTail.left,
+        y: this.arrowTail.top,
+      },
+      Q: {
+        x1: this.controlPoint.left,
+        y1: this.controlPoint.top,
+        x2: this.arrowHead.left,
+        y2: this.arrowHead.top,
+      },
+    };
+    const pathStr = `M ${pathCoords.M.x} ${pathCoords.M.y} Q ${pathCoords.Q.x1}, ${pathCoords.Q.y1}, ${pathCoords.Q.x2}, ${pathCoords.Q.y2}`;
+    const caca = new fabric.Path(pathStr, {});
+    this.updatePath('from', caca.path[0][1], caca.path[0][2], false);
+    this.updatePath('to', caca.path[1][3], caca.path[1][4], false);
+    this.updatePath('control', caca.path[1][1], caca.path[1][2], true);
+
+    // Connect or Disconnect depending on extremities positions
+    this.isValidTailConnectionMask.set('opacity', 0);
+    this.isValidHeadConnectionMask.set('opacity', 0);
+    this._connectDisconnectExtremity('from');
+    this._connectDisconnectExtremity('to');
+  }
+
+  /**
+   * Helper to display a valid circle mask on specific conditions.
+   * If the extremity is touching an anchor of a LinkableShape from which it is not yet connected => show GREEN
+   * If the extremity is touching an anchor of a LinkableShape from which it is already connected by the other extremity => show RED
+   * @param direction
+   * @private
+   */
+  _checkExtremityCanBeConnected(direction) {
+    const { canvas } = this;
+
+    let extremity;
+    let mask;
+    if (direction === 'from') {
+      extremity = this.arrowTail;
+      mask = this.isValidTailConnectionMask;
+    } else if (direction === 'to') {
+      extremity = this.arrowHead;
+      mask = this.isValidHeadConnectionMask;
+    }
+
+    mask.left = extremity.left;
+    mask.top = extremity.top;
+    mask.setCoords();
+    mask.set('opacity', 0);
+
+    // Check if intersects with anchor
+    const anchors = canvas.getObjects()
+      .filter((o) => o.type === 'anchor');
+    extremity.set('stroke', '#000');
+    for (let a = 0; a < anchors.length; a += 1) {
+      if (extremity.intersectsWithObject(anchors[a])) {
+        mask.set('opacity', 0.5);
+        if (this.isValidConnection(direction, anchors[a].shapeId, anchors[a].cardinal)) {
+          mask.set({
+            stroke: '#57b857',
+            fill: '#57b857',
+          });
+          extremity.set('stroke', '#5f5');
+        } else {
+          mask.set({
+            stroke: '#ea4f37',
+            fill: '#ea4f37',
+          });
+          extremity.set('stroke', '#ea4f37');
+        }
+      }
+    }
+  }
+
+  /**
+   * Helper to execute connect/disconnect depending on specific conditions.
+   * If the extremity was connected AND it is NOT touching the anchor anymore => disconnect it.
+   * If the extremity was disconnected AND it is touching the anchor => connect it.
+   * @param direction
+   * @private
+   */
+  _connectDisconnectExtremity(direction) {
+    const { canvas } = this;
+
+    let extremity;
+    if (direction === 'from') {
+      extremity = this.arrowTail;
+    } else if (direction === 'to') {
+      extremity = this.arrowHead;
+    }
+
+    // Check if intersects with anchor
+    const anchors = canvas.getObjects()
+      .filter((o) => o.type === 'anchor');
+    for (let a = 0; a < anchors.length; a += 1) {
+      if (extremity.intersectsWithObject(anchors[a])) {
+        this.connectLink(direction, anchors[a].shapeId, anchors[a].cardinal);
+        // anchors[a].set('stroke', '#000');
+        extremity.set('stroke', '#000');
+      } else if (this[direction] && anchors[a] === this[direction].shape.anchors[this[direction].anchor]) {
+        // If this link was connected to this anchor and it doesn't intersect anymore
+        this.disconnectLink(direction);
+      }
+    }
   }
 }

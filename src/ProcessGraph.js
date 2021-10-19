@@ -22,6 +22,10 @@ export default class ProcessGraph {
     // Initialize Canvas
     const canvas = this.canvas = options.canvas ? options.canvas : new fabric.Canvas(options.canvasOpts.el, options.canvasOpts.options);
     canvas.set('preserveObjectStacking', true);
+    // canvas.set('renderOnAddRemove', false);
+    canvas.set('fireRightClick', true);
+    canvas.set('fireMiddleClick', true);
+    canvas.set('stopContextMenu', true);
 
     if (typeof options.grid === 'number') {
       this.setGrid({
@@ -30,11 +34,13 @@ export default class ProcessGraph {
     }
 
     // fabric.Object.prototype.originX = fabric.Object.prototype.originY = 'center';
-    fabric.Object.prototype.toggleOpacity = function toggleOpacity(opacity, timeout) {
-      this.animate('opacity', opacity, {
-        duration: timeout !== undefined ? timeout : 300,
-        onChange: this.canvas.renderAll.bind(this.canvas),
-      });
+    fabric.Object.prototype.toggleOpacity = function toggleOpacity(opacity/* , timeout */) {
+      // this.animate('opacity', opacity, {
+      //   duration: timeout !== undefined ? timeout : 300,
+      //   onChange: this.canvas.renderAll.bind(this.canvas),
+      // });
+      this.set('opacity', opacity);
+      this.canvas.renderAll();
     };
 
     canvas.calcOffset();
