@@ -1,6 +1,6 @@
 const { fabric } = window;
 
-export default class Link {
+export default class CurvedLink {
   /**
    * A Link is a Fabric.Path object whose Start and End points can be connected end any anchor of two LinkableShape.
    * @param {Object}          options
@@ -11,13 +11,13 @@ export default class Link {
    * @param {Object}          [options.start] - Coordinates of the start point
    * @param {Number}          [options.start.x] - X axis coordinate of the start point
    * @param {Number}          [options.start.y] - Y axis coordinate of the start point
+   * @param {Number}          [options.start.direction] -
    * @param {Number}          [options.end.x] - X axis coordinate of the end point
    * @param {Number}          [options.end.y] - Y axis coordinate of the end point
+   * @param {Number}          [options.end.direction] -
    * @param {Object}          [options.custom] - Options end customize the different shapes of the Link
    *
    * @param {Object}          [options.custom.path] - bezier quadratic curve
-   * @param {Object}          [options.custom.controlPoint] - bezier quadratic curve control point
-   * @param {Line}            [options.custom.controlLine] - visual lines start the control point end the start&end points
    * @param {Object}          [options.custom.startPoint] - aka arrowTail
    * @param {Object}          [options.custom.endPoint] - aka arrowHead
    */
@@ -26,29 +26,37 @@ export default class Link {
       id,
       canvas,
     } = options;
-    const x1 = options && options.start && options.start.x ? options.start.x : 0;
-    const y1 = options && options.start && options.start.y ? options.start.y : 0;
-    const x2 = options && options.end && options.end.x ? options.end.x : 0;
-    const y2 = options && options.end && options.end.y ? options.end.y : 0;
     this.id = id;
     this.canvas = canvas;
-
-    // Path, a bezier quadratic curve
-    const pathCoords = {
-      M: {
-        x: x1, // start x
-        y: y1, // start y
-      },
-      Q: {
-        x1: (x1 + x2) / 2, // control x
-        y1: (y1 + y2) / 2, // control y
-        x2, // end x
-        y2, // end y
-      },
+    this.direction = {
+      start: options && options.start && options.start.direction ? options.start.direction : 'east',
+      end: options && options.end && options.end.direction ? options.end.direction : 'west',
     };
+    const start = {
+      x: options && options.start && options.start.x ? options.start.x : 0,
+      y: options && options.start && options.start.y ? options.start.y : 0,
+    };
+    const end = {
+      x: options && options.end && options.end.x ? options.end.x : 0,
+      y: options && options.end && options.end.y ? options.end.y : 0,
+    };
+
+    // Path, a bezier cubic curve
+    const { pathCoordsArray } = this.computePathCoords({
+      start: {
+        x: start.x,
+        y: start.y,
+        direction: this.direction.start,
+      },
+      end: {
+        x: end.x,
+        y: end.y,
+        direction: this.direction.end,
+      },
+    });
     const pathOpts = this.defaultPathOptions = {
       fill: '',
-      stroke: (options.custom && options.custom.path && options.custom.path.strokeWidth) ? options.custom.path.stroke : '#000',
+      stroke: (options.custom && options.custom.path && options.custom.path.stroke) ? options.custom.path.stroke : '#000',
       strokeWidth: (options.custom && options.custom.path && options.custom.path.strokeWidth) ? options.custom.path.strokeWidth : 2,
       objectCaching: false,
       selectable: true,
@@ -56,60 +64,14 @@ export default class Link {
       hasControls: false,
       perPixelTargetFind: true,
     };
-    const pathStr = `M ${pathCoords.M.x} ${pathCoords.M.y} Q ${pathCoords.Q.x1}, ${pathCoords.Q.y1}, ${pathCoords.Q.x2}, ${pathCoords.Q.y2}`;
-    const path = new fabric.Path(pathStr, pathOpts);
+    const path = new fabric.Path(pathCoordsArray, pathOpts);
     this.path = path;
-
-    // Control point and lines for the quadratic curve
-    const controlPoint = this.controlPoint = new fabric.Circle({
-      objectCaching: false,
-      left: pathCoords.Q.x1,
-      top: pathCoords.Q.y1,
-      strokeWidth: 1,
-      radius: 6,
-      fill: '#78befa',
-      stroke: '#78befa',
-      originX: 'center',
-      originY: 'center',
-      hasBorders: false,
-      hasControls: false,
-      selectable: true,
-      opacity: 0,
-    });
-    controlPoint.on('mouseover', this.onLinkMouseOver.bind(this));
-    controlPoint.on('mouseout', this.onLinkMouseOut.bind(this));
-    controlPoint.on('moving', () => {
-      this.updatePath('control', this.controlPoint.left, this.controlPoint.top, false);
-    });
-    controlPoint.on('moved', () => {
-      this.updatePath('control', this.controlPoint.left, this.controlPoint.top, true);
-    });
-    controlPoint.on('mousedown', () => {
-      this.bringToFront();
-    });
-    const controlLineOpts = {
-      objectCaching: false,
-      strokeDashArray: [5, 5],
-      strokeWidth: 1,
-      stroke: '#78befa',
-      selectable: false,
-      hasBorders: false,
-      hasControls: false,
-      evented: false,
-      opacity: 0,
-    };
-    const controlLine1 = this.controlLine1 = new fabric.Line([controlPoint.left, controlPoint.top, x1, y1], controlLineOpts);
-    controlLine1.on('mouseover', this.onLinkMouseOver.bind(this));
-    controlLine1.on('mouseout', this.onLinkMouseOut.bind(this));
-    const controlLine2 = this.controlLine2 = new fabric.Line([controlPoint.left, controlPoint.top, x2, y2], controlLineOpts);
-    controlLine2.on('mouseover', this.onLinkMouseOver.bind(this));
-    controlLine2.on('mouseout', this.onLinkMouseOut.bind(this));
 
     // End point (arrowHead)
     const isValidMaskOpts = {
       objectCaching: false,
-      left: pathCoords.Q.x2,
-      top: pathCoords.Q.y2,
+      left: 0,
+      top: 0,
       strokeWidth: 1,
       radius: 16,
       fill: '#57b857', // ea4f37
@@ -125,8 +87,8 @@ export default class Link {
       objectCaching: false,
       width: 10,
       height: 10,
-      left: pathCoords.Q.x2,
-      top: pathCoords.Q.y2,
+      left: end.x,
+      top: end.y,
       strokeWidth: 1,
       fill: '#000',
       opacity: 1,
@@ -140,11 +102,23 @@ export default class Link {
     const arrowHead = this.arrowHead = new fabric.Triangle(arrowHeadOpts);
     this.isValidHeadConnectionMask = new fabric.Circle(isValidMaskOpts);
     arrowHead.on('moving', () => {
-      this.updatePath('end', arrowHead.left, arrowHead.top, false);
+      this.updatePath({
+        end: {
+          x: arrowHead.left,
+          y: arrowHead.top,
+        },
+        commit: false,
+      });
       this._checkExtremityCanBeConnected('end');
     });
     arrowHead.on('moved', () => {
-      this.updatePath('end', arrowHead.left, arrowHead.top, true);
+      this.updatePath({
+        end: {
+          x: arrowHead.left,
+          y: arrowHead.top,
+        },
+        commit: true,
+      });
       this.isValidHeadConnectionMask.set('opacity', 0);
       this._connectDisconnectExtremity('end');
     });
@@ -162,8 +136,8 @@ export default class Link {
       objectCaching: false,
       width: 10,
       height: 10,
-      left: pathCoords.M.x,
-      top: pathCoords.M.y,
+      left: start.x,
+      top: start.y,
       strokeWidth: 1,
       fill: '#fff',
       opacity: 1,
@@ -177,11 +151,23 @@ export default class Link {
     const arrowTail = this.arrowTail = new fabric.Rect(arrowTailOpts);
     this.isValidTailConnectionMask = new fabric.Circle(isValidMaskOpts);
     arrowTail.on('moving', () => {
-      this.updatePath('start', arrowTail.left, arrowTail.top, false);
+      this.updatePath({
+        start: {
+          x: arrowTail.left,
+          y: arrowTail.top,
+        },
+        commit: false,
+      });
       this._checkExtremityCanBeConnected('start');
     });
     arrowTail.on('moved', () => {
-      this.updatePath('start', arrowTail.left, arrowTail.top, true);
+      this.updatePath({
+        start: {
+          x: arrowTail.left,
+          y: arrowTail.top,
+        },
+        commit: true,
+      });
       this.isValidTailConnectionMask.set('opacity', 0);
       this._connectDisconnectExtremity('start');
     });
@@ -199,26 +185,29 @@ export default class Link {
     const {
       canvas,
       path,
-      controlPoint,
-      controlLine1,
-      controlLine2,
       arrowHead,
       arrowTail,
       isValidTailConnectionMask,
       isValidHeadConnectionMask,
     } = this;
-    canvas.add(controlPoint);
-    canvas.add(controlLine1);
-    canvas.add(controlLine2);
     canvas.add(isValidTailConnectionMask);
     canvas.add(isValidHeadConnectionMask);
     canvas.add(arrowHead);
     canvas.add(arrowTail);
 
     canvas.add(path);
-    this.updatePath('start', path.path[0][1], path.path[0][2], true);
-    this.updatePath('end', path.path[1][3], path.path[1][4], true);
-    this.updatePath('control', path.path[1][1], path.path[1][2], true);
+
+    this.updatePath({
+      start: {
+        x: path.path[0][1],
+        y: path.path[0][2],
+      },
+      end: {
+        x: path.path[2][5],
+        y: path.path[2][6],
+      },
+      commit: true,
+    });
 
     return this;
   }
@@ -235,15 +224,30 @@ export default class Link {
     this.disconnectLink(linkPoint);
 
     // Connect
+    this.direction[linkPoint] = cardinal;
     this[linkPoint] = {
       shape,
       anchor: cardinal,
       handlers: {
         onAnchorPositionModifying: () => {
-          this.updatePath(linkPoint, shape.anchors[cardinal].left, shape.anchors[cardinal].top, false);
+          const opts = {
+            commit: false,
+          };
+          opts[linkPoint] = {
+            x: shape.anchors[cardinal].left,
+            y: shape.anchors[cardinal].top,
+          };
+          this.updatePath(opts);
         },
         onAnchorPositionModified: () => {
-          this.updatePath(linkPoint, shape.anchors[cardinal].left, shape.anchors[cardinal].top, true);
+          const opts = {
+            commit: true,
+          };
+          opts[linkPoint] = {
+            x: shape.anchors[cardinal].left,
+            y: shape.anchors[cardinal].top,
+          };
+          this.updatePath(opts);
         },
       },
     };
@@ -252,7 +256,14 @@ export default class Link {
     shape.anchors[cardinal].on('pg:position:modified', this[linkPoint].handlers.onAnchorPositionModified);
 
     // Update Link
-    this.updatePath(linkPoint, shape.anchors[cardinal].left, shape.anchors[cardinal].top, true, false);
+    const opts = {
+      commit: false,
+    };
+    opts[linkPoint] = {
+      x: shape.anchors[cardinal].left,
+      y: shape.anchors[cardinal].top,
+    };
+    this.updatePath(opts);
   }
 
   disconnectLink(linkPoint) {
@@ -263,61 +274,290 @@ export default class Link {
     }
   }
 
-  resetCurvature() {
-    const {
-      controlPoint,
-      path,
-    } = this;
-    controlPoint.left = (path.path[0][1] + path.path[1][3]) / 2;
-    controlPoint.top = (path.path[0][2] + path.path[1][4]) / 2;
-    controlPoint.setCoords();
-    controlPoint.fire('moved');
-  }
-
   bringToFront() {
     const {
       canvas,
       path,
-      controlPoint,
       arrowHead,
       arrowTail,
     } = this;
     canvas.bringToFront(path);
-    canvas.bringToFront(controlPoint);
     canvas.bringToFront(arrowHead);
     canvas.bringToFront(arrowTail);
   }
 
-  updatePath(linkPoint, x, y, commit, resetCurv) {
-    const path = {
-      M: {
-        x: linkPoint === 'start' ? x : this.path.path[0][1],
-        y: linkPoint === 'start' ? y : this.path.path[0][2],
+  computePathCoords(options) {
+    // Magie magie, et vos idées ont du génie !
+
+    const start = {
+      x: options.start.x,
+      y: options.start.y,
+      direction: options.start && options.start.direction ? options.start.direction : this.direction.start,
+    };
+    const end = {
+      x: options.end.x,
+      y: options.end.y,
+      direction: options.end && options.end.direction ? options.end.direction : this.direction.end,
+    };
+
+    // Center point
+    // If Link is connected, center is calculated between the two linked shapes
+    // If not, it is calculated between link start and end points
+    const center = {
+      x: ((start.x + end.x) / 2),
+      y: ((start.y + end.y) / 2),
+    };
+
+    // COMMENTED: Doesn't work well when linked shape is rotated
+    // if (this.start && this.end && start.direction !== end.direction) {
+    //   center = {
+    //     x: (this.start.shape.getCenterPoint().x + this.end.shape.getCenterPoint().x) / 2,
+    //     y: (this.start.shape.getCenterPoint().y + this.end.shape.getCenterPoint().y) / 2,
+    //   };
+    // }
+
+    const controls = {
+      start: {
+        x: start.x,
+        y: start.y,
       },
-      Q: {
-        x1: linkPoint === 'control' ? x : this.path.path[1][1],
-        y1: linkPoint === 'control' ? y : this.path.path[1][2],
-        x2: linkPoint === 'end' ? x : this.path.path[1][3],
-        y2: linkPoint === 'end' ? y : this.path.path[1][4],
+      end: {
+        x: end.x,
+        y: end.y,
+      },
+      center1: {
+        x: center.x,
+        y: center.y,
+      },
+      center2: {
+        x: center.x,
+        y: center.y,
       },
     };
-    if (commit) {
-      const pathStr = `M ${path.M.x} ${path.M.y} Q ${path.Q.x1}, ${path.Q.y1}, ${path.Q.x2}, ${path.Q.y2}`;
-      const newPath = new fabric.Path(pathStr, this.defaultPathOptions);
+    switch (options.start.direction) {
+      case 'north':
+        controls.start.y -= Math.abs(start.y - center.y);
+        break;
+      case 'south':
+        controls.start.y += Math.abs(start.y - center.y);
+        break;
+      case 'east':
+        controls.start.x += Math.abs(start.x - center.x);
+        break;
+      case 'west':
+      default:
+        controls.start.x -= Math.abs(start.x - center.x);
+        break;
+    }
+    switch (options.end.direction) {
+      case 'north':
+        controls.end.y -= Math.abs(end.y - center.y);
+        break;
+      case 'south':
+        controls.end.y += Math.abs(end.y - center.y);
+        break;
+      case 'east':
+        controls.end.x += Math.abs(end.x - center.x);
+        break;
+      case 'west':
+      default:
+        controls.end.x -= Math.abs(end.x - center.x);
+        break;
+    }
+
+    if (start.direction === end.direction) {
+      // const deltaX = Math.abs(start.x - end.x) / 2;
+      // const deltaY = Math.abs(start.y - end.y) / 2;
+      // const deltaX = 40 + Math.abs(start.x - end.x) / 4;
+      // const deltaY = 40 + Math.abs(start.y - end.y) / 4;
+      const deltaX = 40;
+      const deltaY = 40;
+
+      if (start.direction === 'south' || start.direction === 'north') {
+        // If points are horizontally aligned, we move the Link center point a bit to the left
+        if (Math.abs(start.x - end.x) < 200) {
+          center.x -= 200;
+        }
+
+        center.y += (start.direction === 'south' ? deltaY : -deltaY);
+        controls.start.y = start.y + (start.direction === 'south' ? deltaY : -deltaY);
+        controls.end.y = end.y + (start.direction === 'south' ? deltaY : -deltaY);
+        controls.center1.x = center.x;
+        controls.center2.x = center.x;
+        controls.center1.y = controls.start.y;
+        controls.center2.y = controls.end.y;
+      } else if (start.direction === 'east' || start.direction === 'west') {
+        // If points are vertically aligned, we move the Link center point a bit to the top
+        if (Math.abs(start.y - end.y) < 100) {
+          center.y -= 100;
+        }
+
+        center.x += (start.direction === 'east' ? deltaX : -deltaX);
+        controls.start.x = start.x + (start.direction === 'east' ? deltaX : -deltaX);
+        controls.end.x = end.x + (start.direction === 'east' ? deltaX : -deltaX);
+        controls.center1.x = controls.start.x;
+        controls.center2.x = controls.end.x;
+        controls.center1.y = center.y;
+        controls.center2.y = center.y;
+      }
+    } else if (start.direction === 'south' || start.direction === 'north') {
+      controls.center1.x = center.x;
+      controls.center1.y = controls.start.y;
+      controls.center2.x = center.x;
+      controls.center2.y = controls.end.y;
+    } else if (start.direction === 'east' || start.direction === 'west') {
+      controls.center1.x = controls.start.x;
+      controls.center1.y = center.y;
+      controls.center2.x = controls.end.x;
+      controls.center2.y = center.y;
+    }
+
+    // If link is connected to linked shapes and they are rotated, perform the rotation on the controls points
+    // TODO: to improve
+    if (this.start && this.start.shape && this.start.shape.angle) {
+      const angle = ((this.start.shape.angle * Math.PI) / 180);
+
+      const control = new fabric.Point(controls.start.x, controls.start.y);
+      const origin = new fabric.Point(start.x, start.y);
+      const rotatedControl = fabric.util.rotatePoint(control, origin, angle);
+
+      controls.start.x = rotatedControl.x;
+      controls.start.y = rotatedControl.y;
+    }
+    if (this.end && this.end.shape && this.end.shape.angle) {
+      const angle = ((this.end.shape.angle * Math.PI) / 180);
+
+      const control = new fabric.Point(controls.end.x, controls.end.y);
+      const origin = new fabric.Point(end.x, end.y);
+      const rotatedControl = fabric.util.rotatePoint(control, origin, angle);
+
+      controls.end.x = rotatedControl.x;
+      controls.end.y = rotatedControl.y;
+    }
+
+    // Visual debug
+    // this.canvas.add(new fabric.Circle({
+    //   objectCaching: false,
+    //   left: controls.end.x,
+    //   top: controls.end.y,
+    //   strokeWidth: 1,
+    //   radius: 2,
+    //   fill: '#78befa',
+    //   stroke: '#78befa',
+    //   originX: 'center',
+    //   originY: 'center',
+    //   hasBorders: false,
+    //   hasControls: false,
+    //   selectable: true,
+    //   opacity: 1,
+    // }));
+    // this.canvas.add(new fabric.Circle({
+    //   objectCaching: false,
+    //   left: center.x,
+    //   top: center.y,
+    //   strokeWidth: 1,
+    //   radius: 2,
+    //   fill: '#ff2',
+    //   stroke: '#ff2',
+    //   originX: 'center',
+    //   originY: 'center',
+    //   hasBorders: false,
+    //   hasControls: false,
+    //   selectable: true,
+    //   opacity: 1,
+    // }));
+    // this.canvas.add(new fabric.Circle({
+    //   objectCaching: false,
+    //   left: controls.start.x,
+    //   top: controls.start.y,
+    //   strokeWidth: 1,
+    //   radius: 2,
+    //   fill: '#f22',
+    //   stroke: '#f22',
+    //   originX: 'center',
+    //   originY: 'center',
+    //   hasBorders: false,
+    //   hasControls: false,
+    //   selectable: true,
+    //   opacity: 1,
+    // }));
+
+    const coords = {
+      start: {
+        x: start.x,
+        y: start.y,
+      },
+      end: {
+        x: end.x,
+        y: end.y,
+      },
+      center,
+      controls: {
+        start: {
+          x: controls.start.x,
+          y: controls.start.y,
+        },
+        end: {
+          x: controls.end.x,
+          y: controls.end.y,
+        },
+        center1: {
+          x: controls.center1.x,
+          y: controls.center1.y,
+        },
+        center2: {
+          x: controls.center2.x,
+          y: controls.center2.y,
+        },
+      },
+    };
+    const pathCoordsArray = [
+      ['M', coords.start.x, coords.start.y],
+      ['C', coords.controls.start.x, coords.controls.start.y, coords.controls.center1.x, coords.controls.center1.y, coords.center.x, coords.center.y],
+      ['C', coords.controls.center2.x, coords.controls.center2.y, coords.controls.end.x, coords.controls.end.y, coords.end.x, coords.end.y],
+    ];
+    return {
+      pathCoords: coords,
+      pathCoordsArray,
+    };
+  }
+
+  /**
+   *
+   * @param options
+   * @param options.start.x
+   * @param options.start.y
+   * @param options.end.x
+   * @param options.end.y
+   * @param options.commit
+   */
+  updatePath(options) {
+    const start = {
+      x: options.start && options.start.x ? options.start.x : this.path.path[0][1],
+      y: options.start && options.start.y ? options.start.y : this.path.path[0][2],
+      direction: options.start && options.start.direction ? options.start.direction : this.direction.start,
+    };
+    const end = {
+      x: options.end && options.end.x ? options.end.x : this.path.path[2][5],
+      y: options.end && options.end.y ? options.end.y : this.path.path[2][6],
+      direction: options.end && options.end.direction ? options.end.direction : this.direction.end,
+    };
+    const { pathCoordsArray } = this.computePathCoords({
+      start, end,
+    });
+
+    if (options.commit) {
+      const newPath = new fabric.Path(pathCoordsArray, this.defaultPathOptions);
       this.canvas.remove(this.path);
       this.canvas.add(newPath);
 
-      newPath.on('mouseover', this.onLinkMouseOver.bind(this));
-      newPath.on('mouseout', this.onLinkMouseOut.bind(this));
       newPath.on('mousedown', this.bringToFront.bind(this));
       newPath.on('moving', this.onLinkMoving.bind(this));
       newPath.on('moved', this.onLinkMoved.bind(this));
+
       const toBind = [
         this.arrowHead,
         this.arrowTail,
-        this.controlPoint,
-        this.controlLine1,
-        this.controlLine2,
       ];
       const bossTransform = newPath.calcTransformMatrix();
       const invertedBossTransform = fabric.util.invertTransform(bossTransform);
@@ -332,40 +572,20 @@ export default class Link {
 
       this.path = newPath;
     } else {
-      this.path.set('path', [
-        ['M', path.M.x, path.M.y],
-        ['Q', path.Q.x1, path.Q.y1, path.Q.x2, path.Q.y2],
-      ]);
+      this.path.set('path', pathCoordsArray);
     }
 
     // Update control lines, arrow heads and tails
-    this.controlLine1.set({
-      x1: this.controlPoint.left,
-      y1: this.controlPoint.top,
-      x2: this.path.path[0][1],
-      y2: this.path.path[0][2],
-    });
-    this.controlLine2.set({
-      x1: this.controlPoint.left,
-      y1: this.controlPoint.top,
-      x2: this.path.path[1][3],
-      y2: this.path.path[1][4],
-    });
-    const arrowHeadAngle = (Math.atan2(this.path.path[1][4] - this.path.path[1][2], this.path.path[1][3] - this.path.path[1][1]) * 180) / Math.PI;
+    const arrowHeadAngle = (Math.atan2(this.path.path[2][6] - this.path.path[2][4], this.path.path[2][5] - this.path.path[2][3]) * 180) / Math.PI;
     this.arrowHead.angle = arrowHeadAngle + 90;
-    this.arrowHead.left = this.path.path[1][3];
-    this.arrowHead.top = this.path.path[1][4];
+    this.arrowHead.left = this.path.path[2][5];
+    this.arrowHead.top = this.path.path[2][6];
     this.arrowHead.setCoords();
     this.arrowTail.left = this.path.path[0][1];
     this.arrowTail.top = this.path.path[0][2];
     this.arrowTail.setCoords();
 
     this.bringToFront();
-
-    // Reset control point
-    if (resetCurv) {
-      this.resetCurvature();
-    }
   }
 
   isValidConnection(linkPoint, shapeId, cardinal) {
@@ -418,27 +638,16 @@ export default class Link {
     this.canvas.renderAll();
   }
 
-  onLinkMouseOver() {
-    this.controlPoint.toggleOpacity(1);
-    this.controlLine1.toggleOpacity(1);
-    this.controlLine2.toggleOpacity(1);
-  }
-
-  onLinkMouseOut() {
-    this.controlPoint.toggleOpacity(0);
-    this.controlLine1.toggleOpacity(0);
-    this.controlLine2.toggleOpacity(0);
-  }
-
   onLinkMoving() {
     // Move start, end, control points altogether with the Path
     const toUpdate = [
       this.arrowHead,
       this.arrowTail,
-      this.controlPoint,
-      this.controlLine1,
-      this.controlLine2,
     ];
+
+    const keepHeadAngle = this.arrowHead.angle;
+    const keepTailAngle = this.arrowTail.angle;
+
     toUpdate.forEach((o) => {
       if (!o.relationship) {
         return;
@@ -459,6 +668,9 @@ export default class Link {
         'center',
       );
       o.set(opt);
+      // eslint-disable-next-line no-param-reassign
+      o.angle = (o === this.arrowHead) ? keepHeadAngle : keepTailAngle; // preserve previous angle
+
       o.setCoords();
     });
 
@@ -469,23 +681,17 @@ export default class Link {
 
   onLinkMoved() {
     // Reupdate the Path according end the new coordinates of all elements
-    const pathCoords = {
-      M: {
+    this.updatePath({
+      start: {
         x: this.arrowTail.left,
         y: this.arrowTail.top,
       },
-      Q: {
-        x1: this.controlPoint.left,
-        y1: this.controlPoint.top,
-        x2: this.arrowHead.left,
-        y2: this.arrowHead.top,
+      end: {
+        x: this.arrowHead.left,
+        y: this.arrowHead.top,
       },
-    };
-    const pathStr = `M ${pathCoords.M.x} ${pathCoords.M.y} Q ${pathCoords.Q.x1}, ${pathCoords.Q.y1}, ${pathCoords.Q.x2}, ${pathCoords.Q.y2}`;
-    const caca = new fabric.Path(pathStr, {});
-    this.updatePath('start', caca.path[0][1], caca.path[0][2], false);
-    this.updatePath('end', caca.path[1][3], caca.path[1][4], false);
-    this.updatePath('control', caca.path[1][1], caca.path[1][2], true);
+      commit: true,
+    });
 
     // Connect or Disconnect depending on extremities positions
     this.isValidTailConnectionMask.set('opacity', 0);
@@ -532,6 +738,15 @@ export default class Link {
             fill: '#57b857',
           });
           extremity.set('stroke', '#5f5');
+          const opts = {
+            commit: false,
+          };
+          opts[direction] = {
+            x: extremity.left,
+            y: extremity.top,
+            direction: anchors[a].cardinal,
+          };
+          this.updatePath(opts);
         } else {
           mask.set({
             stroke: '#ea4f37',

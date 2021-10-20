@@ -103,23 +103,15 @@ export default class LinkableShape {
     });
 
     // Anchor points
-    const east = this._makeAnchorPoint('east');
-    const west = this._makeAnchorPoint('west');
-    const north = this._makeAnchorPoint('north');
-    const south = this._makeAnchorPoint('south');
-    const northeast = this._makeAnchorPoint('northeast');
-    const northwest = this._makeAnchorPoint('northwest');
-    const southeast = this._makeAnchorPoint('southeast');
-    const southwest = this._makeAnchorPoint('southwest');
     this.anchors = this.shape.anchors = {
-      east,
-      west,
-      north,
-      south,
-      northeast,
-      northwest,
-      southeast,
-      southwest,
+      east: this._makeAnchorPoint('east'),
+      west: this._makeAnchorPoint('west'),
+      // north: this._makeAnchorPoint('north'),
+      // south: this._makeAnchorPoint('south'),
+      // northeast: this._makeAnchorPoint('northeast'),
+      // northwest: this._makeAnchorPoint('northwest'),
+      // southeast: this._makeAnchorPoint('southeast'),
+      // southwest: this._makeAnchorPoint('southwest'),
     };
 
     // Events related to anchors
@@ -165,22 +157,10 @@ export default class LinkableShape {
     } = this;
     canvas.add(shape);
     canvas.add(modBox);
-    canvas.add(anchors.east);
-    canvas.bringForward(anchors.east, true);
-    canvas.add(anchors.west);
-    canvas.bringForward(anchors.west, true);
-    canvas.add(anchors.north);
-    canvas.bringForward(anchors.north, true);
-    canvas.add(anchors.south);
-    canvas.bringForward(anchors.south, true);
-    canvas.add(anchors.northeast);
-    canvas.bringForward(anchors.northeast, true);
-    canvas.add(anchors.northwest);
-    canvas.bringForward(anchors.northwest, true);
-    canvas.add(anchors.southeast);
-    canvas.bringForward(anchors.southeast, true);
-    canvas.add(anchors.southwest);
-    canvas.bringForward(anchors.southwest, true);
+    Object.keys(anchors).forEach((cardinal) => {
+      canvas.add(anchors[cardinal]);
+      canvas.bringForward(anchors[cardinal], true);
+    });
     this.refreshAnchorsPosition(true);
 
     return this;
@@ -200,35 +180,15 @@ export default class LinkableShape {
   }
 
   refreshAnchorsPosition(commit) {
-    this._setAnchorPositionRelativeToRectangle('east', commit);
-    this._setAnchorPositionRelativeToRectangle('west', this.shape, commit);
-    this._setAnchorPositionRelativeToRectangle('south', this.shape, commit);
-    this._setAnchorPositionRelativeToRectangle('north', this.shape, commit);
-    this._setAnchorPositionRelativeToRectangle('northeast', this.shape, commit);
-    this._setAnchorPositionRelativeToRectangle('northwest', this.shape, commit);
-    this._setAnchorPositionRelativeToRectangle('southeast', this.shape, commit);
-    this._setAnchorPositionRelativeToRectangle('southwest', this.shape, commit);
+    Object.keys(this.anchors).forEach((cardinal) => {
+      this._setAnchorPositionRelativeToRectangle(cardinal, commit);
+    });
   }
 
   toggleAnchorsOpacity(opacity) {
-    const {
-      east,
-      west,
-      north,
-      south,
-      northeast,
-      southeast,
-      northwest,
-      southwest,
-    } = this.anchors;
-    east.toggleOpacity(opacity);
-    west.toggleOpacity(opacity);
-    north.toggleOpacity(opacity);
-    south.toggleOpacity(opacity);
-    northeast.toggleOpacity(opacity);
-    southeast.toggleOpacity(opacity);
-    northwest.toggleOpacity(opacity);
-    southwest.toggleOpacity(opacity);
+    Object.keys(this.anchors).forEach((cardinal) => {
+      this.anchors[cardinal].toggleOpacity(opacity);
+    });
   }
 
   _setAnchorPositionRelativeToRectangle(cardinal, commit) {

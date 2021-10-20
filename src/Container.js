@@ -1,5 +1,5 @@
 import LinkableShape from './LinkableShape.js';
-import Link from './Link.js';
+import CurvedLink from './CurvedLink.js';
 
 const { fabric, _ } = window;
 
@@ -144,7 +144,7 @@ export default class Container extends LinkableShape {
     nextContainer.move(newOptions);
     // nextContainer.rotate(angle);
 
-    const newLink = new Link({
+    const newLink = new CurvedLink({
       canvas,
       start: {
         x: ap.left,
@@ -156,8 +156,8 @@ export default class Container extends LinkableShape {
       },
     });
     newLink.inject(canvas);
-    newLink.connectLink('from', ap.shapeId, ap.cardinal);
-    newLink.connectLink('to', nextContainer.anchors[targetCardinal].shapeId, nextContainer.anchors[targetCardinal].cardinal);
+    newLink.connectLink('start', ap.shapeId, ap.cardinal);
+    newLink.connectLink('end', nextContainer.anchors[targetCardinal].shapeId, nextContainer.anchors[targetCardinal].cardinal);
   }
 
   _onAnchorLeftClick(options) {
@@ -167,19 +167,27 @@ export default class Container extends LinkableShape {
     // Disable the multi selection when moving mouse
     this.canvas.selection = false;
 
-    const newLink = new Link({
+    const oppositeCardinal = {
+      east: 'west',
+      west: 'east',
+      north: 'south',
+      south: 'north',
+    };
+    const newLink = new CurvedLink({
       canvas,
       start: {
         x: ap.left,
         y: ap.top,
+        direction: ap.cardinal,
       },
       end: {
         x: ap.left,
         y: ap.top,
+        direction: oppositeCardinal[ap.cardinal],
       },
     });
     newLink.inject(canvas);
-    newLink.connectLink('from', ap.shapeId, ap.cardinal);
+    newLink.connectLink('start', ap.shapeId, ap.cardinal);
     newLink.arrowHead.fire('mousedown');
 
     const onMouseMove = (event) => {
@@ -197,7 +205,6 @@ export default class Container extends LinkableShape {
       newLink.arrowHead.fire('mouseup');
       canvas.off('mouse:move', onMouseMove);
       canvas.off('mouse:up', onMouseClick);
-      newLink.resetCurvature();
     };
     canvas.on('mouse:up', onMouseClick);
   }
