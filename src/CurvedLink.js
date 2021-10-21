@@ -374,9 +374,13 @@ export default class CurvedLink {
       const deltaY = 40;
 
       if (start.direction === 'south' || start.direction === 'north') {
-        // If points are horizontally aligned, we move the Link center point a bit to the left
-        if (Math.abs(start.x - end.x) < 200) {
-          center.x -= 200;
+        // If link is connected to two shapes
+        // If shapes are horizontally aligned (i.e. on top of each other), we move the Link center point a bit to the left
+        if (this.start && this.end) {
+          // If shapes are vertically aligned (i.e. next to each other), we move the Link center point a bit to the top
+          if (Math.abs(start.y - end.y) < 10) {
+            center.x -= ((this.start.shape.width + this.end.shape.width) / 2);
+          }
         }
 
         center.y += (start.direction === 'south' ? deltaY : -deltaY);
@@ -387,9 +391,12 @@ export default class CurvedLink {
         controls.center1.y = controls.start.y;
         controls.center2.y = controls.end.y;
       } else if (start.direction === 'east' || start.direction === 'west') {
-        // If points are vertically aligned, we move the Link center point a bit to the top
-        if (Math.abs(start.y - end.y) < 100) {
-          center.y -= 100;
+        // If link is connected to two shapes
+        if (this.start && this.end) {
+          // If shapes are vertically aligned (i.e. next to each other), we move the Link center point a bit to the top
+          if (Math.abs(start.y - end.y) < 10) {
+            center.y -= ((this.start.shape.height + this.end.shape.height) / 2);
+          }
         }
 
         center.x += (start.direction === 'east' ? deltaX : -deltaX);
