@@ -127,6 +127,12 @@ export default class LinkableShape {
       mouseout: () => {
         this.toggleAnchorsOpacity(0);
       },
+      modifying: () => {
+        this.refreshAnchorsPosition(false);
+      },
+      modified: () => {
+        this.refreshAnchorsPosition(true);
+      },
       moving: () => {
         this.refreshAnchorsPosition(false);
       },
@@ -188,6 +194,17 @@ export default class LinkableShape {
   toggleAnchorsOpacity(opacity) {
     Object.keys(this.anchors).forEach((cardinal) => {
       this.anchors[cardinal].toggleOpacity(opacity);
+    });
+  }
+
+  bringToFront() {
+    const {
+      canvas, shape, modBox, anchors,
+    } = this;
+    shape.bringToFront();
+    modBox.bringToFront();
+    Object.keys(anchors).forEach((cardinal) => {
+      canvas.bringToFront(anchors[cardinal]);
     });
   }
 
