@@ -172,11 +172,28 @@ export default class LinkableShape {
     return this;
   }
 
+  remove() {
+    const {
+      canvas,
+      shape,
+      anchors,
+      modBox,
+    } = this;
+    canvas.remove(shape);
+    canvas.remove(modBox);
+    Object.keys(anchors).forEach((cardinal) => {
+      canvas.remove(anchors[cardinal]);
+    });
+  }
+
   move(options) {
-    if (options.x) this.shape.set('top', options.x);
-    if (options.y) this.shape.set('left', options.y);
+    if (options.x) this.shape.set('left', options.x);
+    if (options.y) this.shape.set('top', options.y);
+    if (options.originX) this.shape.set('originX', options.originX);
+    if (options.originY) this.shape.set('originY', options.originY);
     this.shape.setCoords();
     this.refreshAnchorsPosition();
+    this.shape.fire(options.moving ? 'moving' : 'moved');
   }
 
   rotate(angle) {

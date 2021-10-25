@@ -48,7 +48,7 @@ module.exports = function Gruntfile(grunt) {
       },
     },
     eslint: {
-      files: ['Gruntfile.js', 'src/**/*.js', 'demo/**/*.js', 'test/**/*.js'],
+      files: ['Gruntfile.js', 'src/**/*.js', 'test/**/*.js'],
     },
   });
 

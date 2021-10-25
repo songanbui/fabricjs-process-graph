@@ -93,38 +93,38 @@ export default class Container extends LinkableShape {
     switch (cardinal) {
       case 'east': {
         targetCardinal = 'west';
-        newOptions.x = top;
-        newOptions.y = left + width + spacing;
+        newOptions.y = top;
+        newOptions.x = left + width + spacing;
         break;
       }
       case 'west': {
         targetCardinal = 'east';
-        newOptions.x = top;
-        newOptions.y = left - width - spacing;
+        newOptions.y = top;
+        newOptions.x = left - width - spacing;
         break;
       }
       case 'north': {
         targetCardinal = 'south';
-        newOptions.x = top - height - spacing;
-        newOptions.y = left;
+        newOptions.y = top - height - spacing;
+        newOptions.x = left;
         break;
       }
       case 'south': {
         targetCardinal = 'north';
-        newOptions.x = top + height + spacing;
-        newOptions.y = left;
+        newOptions.y = top + height + spacing;
+        newOptions.x = left;
         break;
       }
       case 'northeast': {
         targetCardinal = 'southwest';
-        newOptions.x = top - height - spacing;
-        newOptions.y = left + width + spacing;
+        newOptions.y = top - height - spacing;
+        newOptions.x = left + width + spacing;
         break;
       }
       case 'northwest': {
         targetCardinal = 'southeast';
-        newOptions.x = top - height - spacing;
-        newOptions.y = left - width - spacing;
+        newOptions.y = top - height - spacing;
+        newOptions.x = left - width - spacing;
         break;
       }
       case 'southeast': {
@@ -136,8 +136,8 @@ export default class Container extends LinkableShape {
       case 'southwest':
       default: {
         targetCardinal = 'northeast';
-        newOptions.x = top + height + spacing;
-        newOptions.y = left - width - spacing;
+        newOptions.y = top + height + spacing;
+        newOptions.x = left - width - spacing;
         break;
       }
     }
