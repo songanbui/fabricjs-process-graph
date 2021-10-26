@@ -1,13 +1,17 @@
-import Container from './src/Container.js';
 import ProcessGraph from './src/ProcessGraph.js';
-import Link from './src/Link.js';
+
 import LinkableShape from './src/LinkableShape.js';
+import Container from './src/Container.js';
+import ExpandableContainer from './src/ExpandableContainer.js';
+
+import Link from './src/Link.js';
 import CurvedLink from './src/CurvedLink.js';
 
 window.pg = {
   ProcessGraph,
-  Container,
-  Link,
   LinkableShape,
+  Container,
+  ExpandableContainer,
+  Link,
   CurvedLink,
 };

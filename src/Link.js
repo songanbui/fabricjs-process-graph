@@ -197,6 +197,7 @@ export default class Link {
 
   inject() {
     const {
+      id,
       canvas,
       path,
       controlPoint,
@@ -219,6 +220,8 @@ export default class Link {
     this.updatePath('start', path.path[0][1], path.path[0][2], true);
     this.updatePath('end', path.path[1][3], path.path[1][4], true);
     this.updatePath('control', path.path[1][1], path.path[1][2], true);
+
+    canvas.links[id] = this;
 
     return this;
   }

@@ -26,7 +26,10 @@ export default class ProcessGraph {
     canvas.set('fireRightClick', true);
     canvas.set('fireMiddleClick', true);
     canvas.set('stopContextMenu', true);
+    canvas.linkableShapes = {};
+    canvas.link = {};
 
+    // Set grid
     if (typeof options.grid === 'number') {
       this.setGrid({
         grid: options.grid,

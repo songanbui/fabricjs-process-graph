@@ -156,6 +156,7 @@ export default class LinkableShape {
 
   inject() {
     const {
+      id,
       canvas,
       shape,
       anchors,
@@ -169,11 +170,14 @@ export default class LinkableShape {
     });
     this.refreshAnchorsPosition(true);
 
+    canvas.linkableShapes[id] = this;
+
     return this;
   }
 
   remove() {
     const {
+      id,
       canvas,
       shape,
       anchors,
@@ -184,6 +188,8 @@ export default class LinkableShape {
     Object.keys(anchors).forEach((cardinal) => {
       canvas.remove(anchors[cardinal]);
     });
+
+    delete canvas.linkableShapes[id];
   }
 
   move(options) {

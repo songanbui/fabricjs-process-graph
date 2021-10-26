@@ -292,6 +292,8 @@ export default class ExpandableContainer extends LinkableShape {
       // Calculate new dimensions
       const padding = 10;
       const margin = 10;
+      const oldRectWidth = shapes.rect.width;
+      const oldRectHeight = shapes.rect.height;
 
       const newRectWidth = Math.max(padding * 2 + children.length * initialOpts.child.width
         + (children.length - 1) * margin, initialOpts.rect.width);
@@ -306,9 +308,7 @@ export default class ExpandableContainer extends LinkableShape {
       shapes.text.textAlign = 'left';
       shapes.text.setCoords();
 
-      // TODO: improve visibility / collision
-      shapes.rect.opacity = 0.7;
-
+      // Add children containers
       for (let c = 0; c < children.length; c += 1) {
         const child = children[c];
         child.container.shape.left = shape.left + padding
@@ -317,11 +317,32 @@ export default class ExpandableContainer extends LinkableShape {
         shape.addWithUpdate(child.container.shape);
       }
 
+      // Update the container coords
       shape.addWithUpdate();
       shape.setCoords();
       this.bringToFront();
       canvas.renderAll();
       this.shape.fire('modified');
+
+      // Update all other containers that are below and/or on the right of the current shape, to avoid collision
+      shapes.rect.opacity = 0.7;
+      const otherShapes = Object.values(canvas.linkableShapes);
+      if (otherShapes.length > 1) {
+        const deltaX = newRectWidth - oldRectWidth;
+        const deltaY = newRectHeight - oldRectHeight;
+        for (let o = 0; o < otherShapes.length; o += 1) {
+          const shapeToMove = otherShapes[o];
+          if (shapeToMove.id !== this.id) {
+            if (this.shape.left <= shapeToMove.shape.aCoords.br.x && this.shape.top <= shapeToMove.shape.aCoords.br.y) {
+              shapeToMove.move({
+                x: shapeToMove.shape.left + deltaX,
+                y: shapeToMove.shape.top + deltaY,
+                moving: false,
+              });
+            }
+          }
+        }
+      }
     }
 
     this.isExpanded = true;
@@ -336,6 +357,8 @@ export default class ExpandableContainer extends LinkableShape {
       // Calculate new dimensions
       const padding = 10;
       const margin = 10;
+      const oldRectWidth = shapes.rect.width;
+      const oldRectHeight = shapes.rect.height;
 
       const newRectWidth = initialOpts.rect.width;
       const newRectHeight = initialOpts.rect.height;
@@ -348,9 +371,7 @@ export default class ExpandableContainer extends LinkableShape {
       shapes.text.textAlign = 'left';
       shapes.text.setCoords();
 
-      // TODO: improve visibility / collision
-      shapes.rect.opacity = 1;
-
+      // Remove children containers
       for (let c = 0; c < children.length; c += 1) {
         const child = children[c];
         child.container.left = shape.left + padding
@@ -359,11 +380,31 @@ export default class ExpandableContainer extends LinkableShape {
         shape.remove(child.container.shape);
       }
 
+      // Update the container coords
       shape.addWithUpdate();
       shape.setCoords();
       canvas.renderAll();
-
       this.shape.fire('modified');
+
+      // Update all other containers that are below and/or on the right of the current shape, to avoid collision
+      shapes.rect.opacity = 1;
+      const otherShapes = Object.values(canvas.linkableShapes);
+      if (otherShapes.length > 1) {
+        const deltaX = newRectWidth - oldRectWidth;
+        const deltaY = newRectHeight - oldRectHeight;
+        for (let o = 0; o < otherShapes.length; o += 1) {
+          const shapeToMove = otherShapes[o];
+          if (otherShapes[o].id !== this.id) {
+            if (this.shape.left <= shapeToMove.shape.aCoords.br.x && this.shape.top <= shapeToMove.shape.aCoords.br.y) {
+              shapeToMove.move({
+                x: shapeToMove.shape.left + deltaX,
+                y: shapeToMove.shape.top + deltaY,
+                moving: false,
+              });
+            }
+          }
+        }
+      }
     }
     this.isExpanded = false;
   }
