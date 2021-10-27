@@ -320,6 +320,7 @@ export default class ExpandableContainer extends LinkableShape {
                 x: shapeToMove.shape.left + deltaX,
                 y: shapeToMove.shape.top + deltaY,
                 moving: false,
+                skipCollision: true,
               });
             } else if (this.shape.aCoords.bl.y < shapeToMove.shape.aCoords.tl.y) { // If expanded Shape is above the current shape
               if (this.shape.aCoords.tl.x < shapeToMove.shape.aCoords.tr.x) {
@@ -401,6 +402,7 @@ export default class ExpandableContainer extends LinkableShape {
                 x: shapeToMove.shape.left + deltaX,
                 y: shapeToMove.shape.top + deltaY,
                 moving: false,
+                skipCollision: true,
               });
             } else if (this.shape.aCoords.bl.y < shapeToMove.shape.aCoords.tl.y) { // If expanded Shape is above the current shape
               if (this.shape.aCoords.tl.x < shapeToMove.shape.aCoords.tr.x) {
