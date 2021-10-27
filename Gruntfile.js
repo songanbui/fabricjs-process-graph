@@ -58,4 +58,5 @@ module.exports = function Gruntfile(grunt) {
   grunt.loadNpmTasks('grunt-eslint');
 
   grunt.registerTask('default', ['eslint', 'browserify:dist', 'uglify']);
+  grunt.registerTask('no-eslint', ['browserify:dist', 'uglify']);
 };

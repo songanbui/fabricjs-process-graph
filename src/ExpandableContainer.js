@@ -305,6 +305,43 @@ export default class ExpandableContainer extends LinkableShape {
       const newRectHeight = children.length > 0 ? padding + shapes.image.height + margin
         + initialOpts.child.height + padding : initialOpts.rect.height;
 
+      // Update all other containers that are below and/or on the right of the current shape, to avoid collision
+      shapes.rect.opacity = 0.7;
+      const otherShapes = Object.values(canvas.linkableShapes);
+      if (otherShapes.length > 1) {
+        const deltaX = newRectWidth - oldRectWidth;
+        const deltaY = newRectHeight - oldRectHeight;
+        for (let o = 0; o < otherShapes.length; o += 1) {
+          const shapeToMove = otherShapes[o];
+          if (shapeToMove.id !== this.id) {
+            // If expanded Shape is above AND on the left of the current shape
+            if (this.shape.aCoords.br.x <= shapeToMove.shape.aCoords.tl.x && this.shape.aCoords.br.y <= shapeToMove.shape.aCoords.tl.y) {
+              shapeToMove.move({
+                x: shapeToMove.shape.left + deltaX,
+                y: shapeToMove.shape.top + deltaY,
+                moving: false,
+              });
+            } else if (this.shape.aCoords.bl.y < shapeToMove.shape.aCoords.tl.y) { // If expanded Shape is above the current shape
+              if (this.shape.aCoords.tl.x < shapeToMove.shape.aCoords.tr.x) {
+                shapeToMove.move({
+                  y: shapeToMove.shape.top + deltaY,
+                  moving: false,
+                  skipCollision: true,
+                });
+              }
+            } else if (this.shape.aCoords.tr.x < shapeToMove.shape.aCoords.tl.x) { // If expanded Shape is on the left of the current shape
+              if (this.shape.aCoords.tl.y < shapeToMove.shape.aCoords.bl.y) {
+                shapeToMove.move({
+                  x: shapeToMove.shape.left + deltaX,
+                  moving: false,
+                  skipCollision: true,
+                });
+              }
+            }
+          }
+        }
+      }
+
       // Resize existing shapes
       shapes.rect.width = newRectWidth;
       shapes.rect.height = newRectHeight;
@@ -328,27 +365,6 @@ export default class ExpandableContainer extends LinkableShape {
       this.bringToFront();
       this.shape.fire('modified');
 
-      // Update all other containers that are below and/or on the right of the current shape, to avoid collision
-      shapes.rect.opacity = 0.7;
-      const otherShapes = Object.values(canvas.linkableShapes);
-      if (otherShapes.length > 1) {
-        const deltaX = newRectWidth - oldRectWidth;
-        const deltaY = newRectHeight - oldRectHeight;
-        for (let o = 0; o < otherShapes.length; o += 1) {
-          const shapeToMove = otherShapes[o];
-          if (shapeToMove.id !== this.id) {
-            if (this.shape.left <= shapeToMove.shape.aCoords.br.x && this.shape.top <= shapeToMove.shape.aCoords.br.y) {
-              shapeToMove.move({
-                x: shapeToMove.shape.left + deltaX,
-                y: shapeToMove.shape.top + deltaY,
-                moving: false,
-                skipCollision: true,
-              });
-            }
-          }
-        }
-      }
-
       canvas.renderAll();
     }
 
@@ -369,6 +385,43 @@ export default class ExpandableContainer extends LinkableShape {
 
       const newRectWidth = initialOpts.rect.width;
       const newRectHeight = initialOpts.rect.height;
+
+      // Update all other containers that are below and/or on the right of the current shape, to avoid collision
+      shapes.rect.opacity = 1;
+      const otherShapes = Object.values(canvas.linkableShapes);
+      if (otherShapes.length > 1) {
+        const deltaX = newRectWidth - oldRectWidth;
+        const deltaY = newRectHeight - oldRectHeight;
+        for (let o = 0; o < otherShapes.length; o += 1) {
+          const shapeToMove = otherShapes[o];
+          if (otherShapes[o].id !== this.id) {
+            // If expanded Shape is above AND on the left of the current shape
+            if (this.shape.aCoords.br.x <= shapeToMove.shape.aCoords.tl.x && this.shape.aCoords.br.y <= shapeToMove.shape.aCoords.tl.y) {
+              shapeToMove.move({
+                x: shapeToMove.shape.left + deltaX,
+                y: shapeToMove.shape.top + deltaY,
+                moving: false,
+              });
+            } else if (this.shape.aCoords.bl.y < shapeToMove.shape.aCoords.tl.y) { // If expanded Shape is above the current shape
+              if (this.shape.aCoords.tl.x < shapeToMove.shape.aCoords.tr.x) {
+                shapeToMove.move({
+                  y: shapeToMove.shape.top + deltaY,
+                  moving: false,
+                  skipCollision: true,
+                });
+              }
+            } else if (this.shape.aCoords.tr.x < shapeToMove.shape.aCoords.tl.x) { // If expanded Shape is on the left of the current shape
+              if (this.shape.aCoords.tl.y < shapeToMove.shape.aCoords.bl.y) {
+                shapeToMove.move({
+                  x: shapeToMove.shape.left + deltaX,
+                  moving: false,
+                  skipCollision: true,
+                });
+              }
+            }
+          }
+        }
+      }
 
       // Resize existing shapes
       shapes.rect.width = newRectWidth;
@@ -391,26 +444,6 @@ export default class ExpandableContainer extends LinkableShape {
       shape.addWithUpdate();
       shape.setCoords();
       this.shape.fire('modified');
-
-      // Update all other containers that are below and/or on the right of the current shape, to avoid collision
-      shapes.rect.opacity = 1;
-      const otherShapes = Object.values(canvas.linkableShapes);
-      if (otherShapes.length > 1) {
-        const deltaX = newRectWidth - oldRectWidth;
-        const deltaY = newRectHeight - oldRectHeight;
-        for (let o = 0; o < otherShapes.length; o += 1) {
-          const shapeToMove = otherShapes[o];
-          if (otherShapes[o].id !== this.id) {
-            if (this.shape.left <= shapeToMove.shape.aCoords.br.x && this.shape.top <= shapeToMove.shape.aCoords.br.y) {
-              shapeToMove.move({
-                x: shapeToMove.shape.left + deltaX,
-                y: shapeToMove.shape.top + deltaY,
-                moving: false,
-              });
-            }
-          }
-        }
-      }
 
       canvas.renderAll();
     }
