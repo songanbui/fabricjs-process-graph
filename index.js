@@ -1,3 +1,5 @@
+import '@babel/polyfill';
+
 import ProcessGraph from './src/ProcessGraph.js';
 
 import LinkableShape from './src/LinkableShape.js';

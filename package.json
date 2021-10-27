@@ -2,6 +2,7 @@
   "name": "fabricjs-process-graph",
   "version": "1.0.0",
   "dependencies": {
+    "@babel/polyfill": "^7.12.1",
     "express": "^4.17.1"
   },
   "main": "demo/index.js",
@@ -29,6 +30,7 @@
     "babel-cli": "^6.26.0",
     "babelify": "^10.0.0",
     "bower": "^1.8.12",
+    "core-js": "^3.19.0",
     "eslint": "^6.7.2",
     "eslint-config-airbnb": "^18.0.1",
     "eslint-plugin-import": "^2.19.1",
