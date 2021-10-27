@@ -117,13 +117,15 @@ export default class ProcessGraph {
       this.handlers.grid = {
         'object:moving': (event) => {
           const { grid } = this;
-          const { target } = event;
-          if (target.type !== 'linkableShape') {
+          const shape = event.target;
+          if (shape.type !== 'linkableShape') {
             return;
           }
-          event.target.set({
-            left: Math.round(event.target.left / grid) * grid,
-            top: Math.round(event.target.top / grid) * grid,
+
+          canvas.linkableShapes[shape.id].move({
+            x: Math.round(shape.left / grid) * grid,
+            y: Math.round(shape.top / grid) * grid,
+            moving: true,
           });
         },
         'object:scaling': (event) => {

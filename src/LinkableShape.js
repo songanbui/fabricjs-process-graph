@@ -193,13 +193,59 @@ export default class LinkableShape {
   }
 
   move(options) {
-    if (options.x) this.shape.set('left', options.x);
-    if (options.y) this.shape.set('top', options.y);
-    if (options.originX) this.shape.set('originX', options.originX);
-    if (options.originY) this.shape.set('originY', options.originY);
+    const { canvas, shape } = this;
+
+    // Prevent LinkableShape to overlap with each other
+    let left = options.x || shape.left;
+    let top = options.y || shape.top;
+    const clearance = 10;
+    shape.setCoords(); // Sets corner position coordinates based on current angle, width and height
+    let isIntersecting = false;
+    if (!options.skipCollision) {
+      const otherShapes = Object.values(canvas.linkableShapes);
+      for (let o = 0; o < otherShapes.length; o += 1) {
+        const targ = otherShapes[o].shape;
+
+        if (targ !== shape) {
+          if (shape.intersectsWithObject(targ)) {
+            isIntersecting = true;
+            const sB = shape.aCoords.bl.y;
+            const sT = shape.aCoords.tl.y;
+            const sR = shape.aCoords.tr.x;
+            const sL = shape.aCoords.tl.x;
+
+            const tB = targ.aCoords.bl.y;
+            const tT = targ.aCoords.tl.y;
+            const tR = targ.aCoords.tr.x;
+            const tL = targ.aCoords.tl.x;
+
+            if (sB - tT > clearance) {
+              top = tT - shape.height - clearance;
+            } else if (sT - tB < clearance) {
+              top = tB + clearance;
+            } else if (sR - tL > clearance) {
+              left = tL - shape.width - clearance;
+            } else if (sL - tR < clearance) {
+              left = tR + clearance;
+            }
+          }
+        }
+      }
+    }
+
+    this.shape.set('left', left);
+    this.shape.set('top', top);
     this.shape.setCoords();
     this.refreshAnchorsPosition();
     this.shape.fire(options.moving ? 'moving' : 'moved');
+
+    if (isIntersecting) {
+      this.move({
+        x: left,
+        y: top,
+        moving: options.moving,
+      });
+    }
   }
 
   rotate(angle) {

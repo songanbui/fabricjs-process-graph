@@ -45,6 +45,8 @@ export default class ExpandableContainer extends LinkableShape {
   async load(isChild) {
     const { options, shape } = this;
 
+    this.isLoaded = false;
+
     const shapePos = {
       left: this.shape.left,
       top: this.shape.top,
@@ -237,6 +239,9 @@ export default class ExpandableContainer extends LinkableShape {
         }
       },
     });
+
+    this.isLoaded = true;
+
     return this;
   }
 
@@ -321,7 +326,6 @@ export default class ExpandableContainer extends LinkableShape {
       shape.addWithUpdate();
       shape.setCoords();
       this.bringToFront();
-      canvas.renderAll();
       this.shape.fire('modified');
 
       // Update all other containers that are below and/or on the right of the current shape, to avoid collision
@@ -338,11 +342,14 @@ export default class ExpandableContainer extends LinkableShape {
                 x: shapeToMove.shape.left + deltaX,
                 y: shapeToMove.shape.top + deltaY,
                 moving: false,
+                skipCollision: true,
               });
             }
           }
         }
       }
+
+      canvas.renderAll();
     }
 
     this.isExpanded = true;
@@ -383,7 +390,6 @@ export default class ExpandableContainer extends LinkableShape {
       // Update the container coords
       shape.addWithUpdate();
       shape.setCoords();
-      canvas.renderAll();
       this.shape.fire('modified');
 
       // Update all other containers that are below and/or on the right of the current shape, to avoid collision
@@ -405,6 +411,8 @@ export default class ExpandableContainer extends LinkableShape {
           }
         }
       }
+
+      canvas.renderAll();
     }
     this.isExpanded = false;
   }
