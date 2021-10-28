@@ -1,3 +1,6 @@
+import ExpandableContainer from './ExpandableContainer.js';
+import CurvedLink from './CurvedLink.js';
+
 const { fabric } = window;
 
 export default class ProcessGraph {
@@ -230,5 +233,313 @@ export default class ProcessGraph {
         canvas.on(this.handlers.grid);
       }
     });
+  }
+
+  async addContainer(options) {
+    const containerOpts = {
+      id: options.id,
+      canvas: this.canvas,
+      left: options.left || 0,
+      top: options.top || 0,
+      angle: 0,
+      label: options.label,
+      img: {
+        src: options.img.src,
+      },
+      childWidth: 72,
+      childHeight: 42,
+      children: Array.isArray(options.children) ? options.children : [],
+    };
+    const container = new ExpandableContainer(containerOpts);
+    // eslint-disable-next-line no-await-in-loop
+    await container.load();
+    container.collapse();
+    container.inject();
+    if (options.isTemporary) {
+      container.shape.set('opacity', 0.5);
+    }
+    if (options.x && options.y) {
+      container.move({
+        x: options.x,
+        y: options.y,
+        moving: false,
+      });
+    }
+    this.containers[options.id] = container;
+    return container;
+  }
+
+  removeContainer(options) {
+    if (options.id in this.containers) {
+      this.containers[options.id].remove();
+    }
+  }
+
+  async addLink(options) {
+    const { canvas } = this;
+    const linkOpts = {
+      id: options.id,
+      canvas,
+      start: {
+        x: (options.x || 0) - 50,
+        y: options.y || 0,
+      },
+      end: {
+        x: (options.x || 0) + 50,
+        y: options.y || 0,
+      },
+    };
+    const link = new CurvedLink(linkOpts);
+    link.inject(canvas);
+
+    if (!options.isTemporary) {
+      link.arrowHead.fire('moved');
+      link.arrowTail.fire('moved');
+    }
+    this.links[options.id] = link;
+
+    return link;
+  }
+
+  removeLink(options) {
+    if (options.id in this.links) {
+      this.links[options.id].remove();
+    }
+  }
+
+  expand(id) {
+    if (id in this.containers) {
+      this.containers[id].expand();
+    }
+  }
+
+  collapse(id) {
+    if (id in this.containers) {
+      this.containers[id].collapse();
+    }
+  }
+
+  setSelectedChooserType(type) {
+    this.selectedChooserType = type;
+  }
+
+  async onDragEnter(event) {
+    // The immersiveFrame in which this PG is injected is messing up the mouse x,y coordinates.
+    const canvasAbsolutePosition = this.canvasElement.getBoundingClientRect();
+    const x = event.e.x - canvasAbsolutePosition.left;
+    const y = event.e.y - canvasAbsolutePosition.top;
+
+    const type = this.selectedChooserType.id;
+    switch (type) {
+      case 'ProductFlow':
+        this.tempDraggedObject = await this.addLink({
+          id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
+          x,
+          y,
+        });
+        break;
+      case 'GeneralSystem':
+      default: {
+        this.tempDraggedObject = await this.addContainer({
+          id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
+          label: this.selectedChooserType.label,
+          img: {
+            src: this.selectedChooserType.icon,
+          },
+          x: 0,
+          y: 0,
+          isTemporary: true,
+        });
+        break;
+      }
+    }
+    event.e.preventDefault();
+  }
+
+  async onDragOver(event) {
+    // The immersiveFrame in which this PG is injected is messing up the mouse x,y coordinates.
+    const canvasAbsolutePosition = this.canvasElement.getBoundingClientRect();
+    let x = event.e.x - canvasAbsolutePosition.left;
+    let y = event.e.y - canvasAbsolutePosition.top;
+
+    if (this.tempDraggedObject !== null) {
+      const type = this.selectedChooserType.id;
+      switch (type) {
+        case 'ProductFlow':
+          this.tempDraggedObject.updatePath({
+            start: {
+              x: x - 50,
+              y,
+            },
+            end: {
+              x: x + 50,
+              y,
+            },
+            commit: false,
+          });
+          this.tempDraggedObject.arrowHead.fire('moving');
+          this.tempDraggedObject.arrowTail.fire('moving');
+          break;
+        case 'GeneralSystem':
+        default: {
+          if (this.tempDraggedObject.isLoaded) {
+            x -= (this.tempDraggedObject.shape.width / 2);
+            y -= (this.tempDraggedObject.shape.height / 2);
+
+            // Grid effects
+            if (this.pg.grid) {
+              const { grid } = this.pg;
+              x = Math.round(x / grid) * grid;
+              y = Math.round(y / grid) * grid;
+            }
+
+            // Move object
+            this.tempDraggedObject.move({
+              x,
+              y,
+              moving: true,
+              skipCollision: true,
+            });
+
+            // Detect intersection with Links
+
+            // Detect intersection with Containers
+            const ids = Object.keys(this.containers);
+            for (let c = 0; c < ids.length; c += 1) {
+              const container = this.containers[ids[c]];
+              if (container.id !== this.tempDraggedObject.id) {
+                const cX = this.tempDraggedObject.shape.left + this.tempDraggedObject.shape.width / 2;
+                const cY = this.tempDraggedObject.shape.top;
+                if (container.shape.intersectsWithRect(
+                  new fabric.Point(cX - 5, cY),
+                  new fabric.Point(cX + 5, cY + 10),
+                )) {
+                  container.setActive(true);
+                } else {
+                  container.setActive(false);
+                }
+              }
+            }
+          }
+          break;
+        }
+      }
+    }
+    event.e.preventDefault();
+  }
+
+  async onDragLeave(event) {
+    if (this.tempDraggedObject !== null) {
+      const type = this.selectedChooserType.id;
+      switch (type) {
+        case 'ProductFlow':
+          this.removeLink({
+            id: this.tempDraggedObject.id,
+          });
+          this.tempDraggedObject = null;
+          break;
+        case 'GeneralSystem':
+        default: {
+          if (this.tempDraggedObject.isLoaded) {
+            this.removeContainer({
+              id: this.tempDraggedObject.id,
+            });
+            this.tempDraggedObject = null;
+          }
+          break;
+        }
+      }
+    }
+    event.e.preventDefault();
+  }
+
+  async onDrop(event) {
+    // The immersiveFrame in which this PG is injected is messing up the mouse x,y coordinates.
+    const canvasAbsolutePosition = this.canvasElement.getBoundingClientRect();
+    let x = event.e.x - canvasAbsolutePosition.left;
+    let y = event.e.y - canvasAbsolutePosition.top;
+
+    const type = this.selectedChooserType.id;
+    switch (type) {
+      case 'ProductFlow':
+        // Remove ghost object
+        if (this.tempDraggedObject !== null) {
+          this.removeLink({
+            id: this.tempDraggedObject.id,
+          });
+          this.tempDraggedObject = null;
+        }
+
+        // Instantiate new object
+        await this.addLink({
+          id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
+          x,
+          y,
+          isTemporary: false,
+        });
+
+        break;
+      case 'GeneralSystem':
+      default: {
+        // Detect intersection with Containers
+        const ids = Object.keys(this.containers);
+        for (let c = 0; c < ids.length; c += 1) {
+          const container = this.containers[ids[c]];
+          if (container.id !== this.tempDraggedObject.id) {
+            container.setActive(false);
+
+            if (container.shape.intersectsWithObject(this.tempDraggedObject.shape)) {
+
+            }
+          }
+        }
+
+        // Remove ghost object
+        if (this.tempDraggedObject !== null) {
+          this.removeContainer({
+            id: this.tempDraggedObject.id,
+          });
+          this.tempDraggedObject = null;
+        }
+
+        // Instantiate new object
+        const opts = {
+          id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
+          label: this.selectedChooserType.label,
+          img: {
+            src: this.selectedChooserType.icon,
+          },
+          x,
+          y,
+          isTemporary: false,
+        };
+        const newContainer = await this.addContainer(opts);
+
+        // Calculate new position
+        x -= (newContainer.shape.width / 2);
+        y -= (newContainer.shape.height / 2);
+
+        // Grid effects
+        if (this.pg.grid) {
+          const { grid } = this.pg;
+          x = Math.round(x / grid) * grid;
+          y = Math.round(y / grid) * grid;
+        }
+
+        // Move object under the mouse cursor
+        newContainer.move({
+          x,
+          y,
+          moving: true,
+        });
+        newContainer.move({ // for handling collisions
+          moving: false,
+        });
+
+        break;
+      }
+    }
+
+    event.e.preventDefault();
   }
 }

@@ -134,7 +134,7 @@ export default class ExpandableContainer extends LinkableShape {
           fontFamily: 'Helvetica',
           textAlign: 'left',
           splitByGrapheme: true,
-
+          fill: '#000',
           originX: 'left',
           originY: 'center',
           left: padding + oImg.width + margin,
@@ -150,7 +150,7 @@ export default class ExpandableContainer extends LinkableShape {
           fontFamily: 'Helvetica',
           textAlign: 'left',
           splitByGrapheme: true,
-
+          fill: '#000',
           originX: 'left',
           originY: 'center',
           left: padding + oImg.width + margin,
@@ -167,7 +167,7 @@ export default class ExpandableContainer extends LinkableShape {
         fontFamily: 'Helvetica',
         textAlign: 'center',
         splitByGrapheme: true,
-
+        fill: '#000',
         originX: 'center',
         originY: 'center',
         left: rect.width / 2,
@@ -286,6 +286,16 @@ export default class ExpandableContainer extends LinkableShape {
     shape.addWithUpdate();
     shape.setCoords();
     canvas.renderAll();
+  }
+
+  setActive(active) {
+    if (active) {
+      this.shapes.rect.set('stroke', '#78befa');
+      this.shapes.text.set('fill', '#78befa');
+    } else {
+      this.shapes.rect.set('stroke', '#666');
+      this.shapes.text.set('fill', '#000');
+    }
   }
 
   expand() {
