@@ -195,9 +195,16 @@ export default class LinkableShape {
   move(options) {
     const { canvas, shape } = this;
 
-    // Prevent LinkableShape to overlap with each other
+    // Move the shape and update coords and anchors
     let left = options.x || shape.left;
     let top = options.y || shape.top;
+    this.shape.set('left', left);
+    this.shape.set('top', top);
+    this.shape.setCoords();
+    this.refreshAnchorsPosition();
+    this.shape.fire(options.moving ? 'moving' : 'moved');
+
+    // Prevent LinkableShape to overlap with each other
     const clearance = 10;
     shape.setCoords(); // Sets corner position coordinates based on current angle, width and height
     let isIntersecting = false;
@@ -232,13 +239,6 @@ export default class LinkableShape {
         }
       }
     }
-
-    this.shape.set('left', left);
-    this.shape.set('top', top);
-    this.shape.setCoords();
-    this.refreshAnchorsPosition();
-    this.shape.fire(options.moving ? 'moving' : 'moved');
-
     if (isIntersecting) {
       this.move({
         x: left,

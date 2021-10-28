@@ -183,6 +183,7 @@ export default class CurvedLink {
 
   inject() {
     const {
+      id,
       canvas,
       path,
       arrowHead,
@@ -209,7 +210,29 @@ export default class CurvedLink {
       commit: true,
     });
 
+    canvas.links[id] = this;
+
     return this;
+  }
+
+  remove() {
+    const {
+      id,
+      canvas,
+      path,
+      arrowHead,
+      arrowTail,
+      isValidTailConnectionMask,
+      isValidHeadConnectionMask,
+    } = this;
+    canvas.remove(isValidTailConnectionMask);
+    canvas.remove(isValidHeadConnectionMask);
+    canvas.remove(arrowHead);
+    canvas.remove(arrowTail);
+
+    canvas.remove(path);
+
+    delete canvas.links[id];
   }
 
   connectLink(linkPoint, shapeId, cardinal) {

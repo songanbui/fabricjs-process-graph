@@ -458,7 +458,7 @@ export default class ExpandableContainer extends LinkableShape {
     } = this.shape;
     const ap = options.target;
     const { cardinal } = ap;
-    const spacing = 50;
+    const spacing = 100;
 
     const nextId = `${id}_next_${cardinal}_${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`;
     const label = `${id}_next_${cardinal}`;
@@ -480,51 +480,51 @@ export default class ExpandableContainer extends LinkableShape {
     switch (cardinal) {
       case 'east': {
         targetCardinal = 'west';
-        newOptions.x = top;
-        newOptions.y = left + width + spacing;
+        newOptions.y = top;
+        newOptions.x = left + width + spacing;
         break;
       }
       case 'west': {
         targetCardinal = 'east';
-        newOptions.x = top;
-        newOptions.y = left - width - spacing;
+        newOptions.y = top;
+        newOptions.x = left - width - spacing;
         break;
       }
       case 'north': {
         targetCardinal = 'south';
-        newOptions.x = top - height - spacing;
-        newOptions.y = left;
+        newOptions.y = top - height - spacing;
+        newOptions.x = left;
         break;
       }
       case 'south': {
         targetCardinal = 'north';
-        newOptions.x = top + height + spacing;
-        newOptions.y = left;
+        newOptions.y = top + height + spacing;
+        newOptions.x = left;
         break;
       }
       case 'northeast': {
         targetCardinal = 'southwest';
-        newOptions.x = top - height - spacing;
-        newOptions.y = left + width + spacing;
+        newOptions.y = top - height - spacing;
+        newOptions.x = left + width + spacing;
         break;
       }
       case 'northwest': {
         targetCardinal = 'southeast';
-        newOptions.x = top - height - spacing;
-        newOptions.y = left - width - spacing;
+        newOptions.y = top - height - spacing;
+        newOptions.x = left - width - spacing;
         break;
       }
       case 'southeast': {
         targetCardinal = 'northwest';
-        newOptions.x = top + height + spacing;
-        newOptions.y = left + width + spacing;
+        newOptions.y = top + height + spacing;
+        newOptions.x = left + width + spacing;
         break;
       }
       case 'southwest':
       default: {
         targetCardinal = 'northeast';
-        newOptions.x = top + height + spacing;
-        newOptions.y = left - width - spacing;
+        newOptions.y = top + height + spacing;
+        newOptions.x = left - width - spacing;
         break;
       }
     }
