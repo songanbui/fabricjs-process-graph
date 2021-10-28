@@ -117,7 +117,7 @@ export default class LinkableShape {
     // Events related to anchors
     shape.on({
       selected: () => {
-        this.toggleAnchorsOpacity(0);
+        this.toggleAnchorsOpacity(1);
       },
       mouseover: () => {
         if (this.canvas.getActiveObject() !== this.shape) {
@@ -125,7 +125,7 @@ export default class LinkableShape {
         }
       },
       mouseout: () => {
-        this.toggleAnchorsOpacity(0);
+        this.toggleAnchorsOpacity(1);
       },
       modifying: () => {
         this.refreshAnchorsPosition(false);
@@ -338,6 +338,7 @@ export default class LinkableShape {
     const {
       shape,
       id,
+      canvas,
     } = this;
     switch (cardinal) {
       case 'east': {
@@ -383,30 +384,51 @@ export default class LinkableShape {
       }
     }
 
-    const ap = new fabric.Circle({
+    // const ap = new fabric.Circle({
+    //   objectCaching: false,
+    //   left,
+    //   top,
+    //   strokeWidth: 2,
+    //   radius: 6,
+    //   fill: '#78befa', // 42a2da d5e8f2
+    //   stroke: '#78befa',
+    //   originX: 'center',
+    //   originY: 'center',
+    //   hasBorders: false,
+    //   hasControls: false,
+    //   selectable: false,
+    //   opacity: 0,
+    //   id: `${id}_${cardinal}`,
+    // });
+    const ap = new fabric.Rect({
       objectCaching: false,
+      width: 10,
+      height: 10,
       left,
       top,
-      strokeWidth: 2,
-      radius: 6,
-      fill: '#78befa', // 42a2da d5e8f2
-      stroke: '#78befa',
+      strokeWidth: 1,
+      fill: '#ddd',
+      stroke: '#999',
       originX: 'center',
       originY: 'center',
       hasBorders: false,
       hasControls: false,
       selectable: false,
-      opacity: 0,
+      opacity: 1,
       id: `${id}_${cardinal}`,
     });
     ap.type = 'anchor';
     ap.shapeId = id;
     ap.cardinal = cardinal;
     ap.on('mouseover', () => {
-      ap.toggleOpacity(1);
+      ap.set('fill', '#78befa');
+      ap.set('stroke', '#78befa');
+      canvas.renderAll();
     });
     ap.on('mouseout', () => {
-      ap.toggleOpacity(0);
+      ap.set('fill', '#ddd');
+      ap.set('stroke', '#999');
+      canvas.renderAll();
     });
 
     ap.on('mousedown', (options) => {

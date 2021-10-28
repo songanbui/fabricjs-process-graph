@@ -250,7 +250,7 @@ export default class Link {
         },
       },
     };
-    shape.anchors[cardinal].opacity = 0;
+    // shape.anchors[cardinal].opacity = 0;
     shape.anchors[cardinal].on('pg:position:modifying', this[linkPoint].handlers.onAnchorPositionModifying);
     shape.anchors[cardinal].on('pg:position:modified', this[linkPoint].handlers.onAnchorPositionModified);
 

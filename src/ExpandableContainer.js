@@ -59,7 +59,7 @@ export default class ExpandableContainer extends LinkableShape {
       originX: 'left',
       originY: 'top',
       strokeWidth: 1,
-      stroke: '#000',
+      stroke: '#666',
       fill: '#fff',
       rx: 4,
       ry: 4,

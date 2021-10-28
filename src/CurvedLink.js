@@ -56,7 +56,7 @@ export default class CurvedLink {
     });
     const pathOpts = this.defaultPathOptions = {
       fill: '',
-      stroke: (options.custom && options.custom.path && options.custom.path.stroke) ? options.custom.path.stroke : '#000',
+      stroke: (options.custom && options.custom.path && options.custom.path.stroke) ? options.custom.path.stroke : '#999',
       strokeWidth: (options.custom && options.custom.path && options.custom.path.strokeWidth) ? options.custom.path.strokeWidth : 2,
       objectCaching: false,
       selectable: true,
@@ -90,9 +90,9 @@ export default class CurvedLink {
       left: end.x,
       top: end.y,
       strokeWidth: 1,
-      fill: '#000',
+      fill: '#ddd',
       opacity: 1,
-      stroke: '#000',
+      stroke: '#999',
       originX: 'center',
       originY: 'center',
       selectable: true,
@@ -139,9 +139,9 @@ export default class CurvedLink {
       left: start.x,
       top: start.y,
       strokeWidth: 1,
-      fill: '#fff',
+      fill: '#ddd',
       opacity: 1,
-      stroke: '#000',
+      stroke: '#999',
       originX: 'center',
       originY: 'center',
       selectable: true,
@@ -251,7 +251,7 @@ export default class CurvedLink {
         },
       },
     };
-    shape.anchors[cardinal].opacity = 0;
+    // shape.anchors[cardinal].opacity = 0;
     shape.anchors[cardinal].on('pg:position:modifying', this[linkPoint].handlers.onAnchorPositionModifying);
     shape.anchors[cardinal].on('pg:position:modified', this[linkPoint].handlers.onAnchorPositionModified);
 
@@ -618,6 +618,9 @@ export default class CurvedLink {
   }
 
   toggleAllAnchorsOpacity(opacity) {
+    return;
+
+    // eslint-disable-next-line no-unreachable
     const anchors = this.canvas.getObjects()
       .filter((o) => o.type === 'anchor');
 
@@ -735,7 +738,6 @@ export default class CurvedLink {
     // Check if intersects with anchor
     const anchors = canvas.getObjects()
       .filter((o) => o.type === 'anchor');
-    extremity.set('stroke', '#000');
     for (let a = 0; a < anchors.length; a += 1) {
       if (extremity.intersectsWithObject(anchors[a])) {
         mask.set('opacity', 0.5);
@@ -744,7 +746,6 @@ export default class CurvedLink {
             stroke: '#57b857',
             fill: '#57b857',
           });
-          extremity.set('stroke', '#5f5');
           const opts = {
             commit: false,
           };
@@ -759,7 +760,6 @@ export default class CurvedLink {
             stroke: '#ea4f37',
             fill: '#ea4f37',
           });
-          extremity.set('stroke', '#ea4f37');
         }
       }
     }
@@ -789,7 +789,6 @@ export default class CurvedLink {
       if (extremity.intersectsWithObject(anchors[a])) {
         this.connectLink(direction, anchors[a].shapeId, anchors[a].cardinal);
         // anchors[a].set('stroke', '#000');
-        extremity.set('stroke', '#000');
       } else if (this[direction] && anchors[a] === this[direction].shape.anchors[this[direction].anchor]) {
         // If this link was connected end this anchor and it doesn't intersect anymore
         this.disconnectLink(direction);
