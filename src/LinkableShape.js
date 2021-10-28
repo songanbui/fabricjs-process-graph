@@ -192,7 +192,7 @@ export default class LinkableShape {
     delete canvas.linkableShapes[id];
   }
 
-  move(options) {
+  move(options, iter) {
     const { canvas, shape } = this;
 
     // Move the shape and update coords and anchors
@@ -239,12 +239,16 @@ export default class LinkableShape {
         }
       }
     }
-    if (isIntersecting) {
+
+    let iteration = iter || 0;
+    if (isIntersecting && iteration < 100) {
+      // eslint-disable-next-line no-param-reassign
+      iteration += 1;
       this.move({
         x: left,
         y: top,
         moving: options.moving,
-      });
+      }, iteration);
     }
   }
 
