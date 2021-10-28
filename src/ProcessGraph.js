@@ -1,7 +1,7 @@
 import ExpandableContainer from './ExpandableContainer.js';
 import CurvedLink from './CurvedLink.js';
 
-const { fabric } = window;
+const { fabric, _ } = window;
 
 export default class ProcessGraph {
   /**
@@ -21,6 +21,8 @@ export default class ProcessGraph {
     this.handlers = {
       grid: {},
     };
+    this.tempDraggedObject = null;
+    this.selectedChooserType = null;
 
     // Initialize Canvas
     const canvas = this.canvas = options.canvas ? options.canvas : new fabric.Canvas(options.canvasOpts.el, options.canvasOpts.options);
@@ -73,6 +75,10 @@ export default class ProcessGraph {
     canvas.on({
       'selection:created': onSelection,
       'selection:updated': onSelection,
+      dragenter: this.onDragEnter.bind(this),
+      dragover: this.onDragOver.bind(this),
+      dragleave: this.onDragLeave.bind(this),
+      drop: this.onDrop.bind(this),
     });
   }
 
@@ -235,10 +241,38 @@ export default class ProcessGraph {
     });
   }
 
+  /**
+   *
+   * @param {Object} objects
+   * @param {Array} objects.containers
+   * @param {Array} objects.links
+   * @returns {Promise<void>}
+   */
+  async load(objects) {
+    const { canvas } = this;
+
+    // Containers
+    for (let c = 0; c < objects.containers.length; c += 1) {
+      const opts = _.cloneDeep(objects.containers[c]);
+      opts.canvas = canvas;
+      // eslint-disable-next-line no-await-in-loop
+      await this.addContainer(opts);
+    }
+
+    // Links
+    for (let l = 0; l < objects.links.length; l += 1) {
+      const opts = _.cloneDeep(objects.links[l]);
+      opts.canvas = canvas;
+      // eslint-disable-next-line no-await-in-loop
+      await this.addLink(opts);
+    }
+  }
+
   async addContainer(options) {
+    const { canvas } = this;
     const containerOpts = {
       id: options.id,
-      canvas: this.canvas,
+      canvas,
       left: options.left || 0,
       top: options.top || 0,
       angle: 0,
@@ -265,13 +299,14 @@ export default class ProcessGraph {
         moving: false,
       });
     }
-    this.containers[options.id] = container;
+    canvas.linkableShapes[options.id] = container;
     return container;
   }
 
   removeContainer(options) {
-    if (options.id in this.containers) {
-      this.containers[options.id].remove();
+    const { canvas } = this;
+    if (options.id in canvas.linkableShapes) {
+      canvas.linkableShapes[options.id].remove();
     }
   }
 
@@ -281,12 +316,12 @@ export default class ProcessGraph {
       id: options.id,
       canvas,
       start: {
-        x: (options.x || 0) - 50,
-        y: options.y || 0,
+        x: options.start.x || 0,
+        y: options.start.y || 0,
       },
       end: {
-        x: (options.x || 0) + 50,
-        y: options.y || 0,
+        x: options.end.x || 0,
+        y: options.end.y || 0,
       },
     };
     const link = new CurvedLink(linkOpts);
@@ -295,27 +330,37 @@ export default class ProcessGraph {
     if (!options.isTemporary) {
       link.arrowHead.fire('moved');
       link.arrowTail.fire('moved');
+
+      if (options.start && options.start.id && options.start.cardinal) {
+        link.connectLink('start', options.start.id, options.start.cardinal);
+      }
+      if (options.end && options.end.id && options.end.cardinal) {
+        link.connectLink('end', options.end.id, options.end.cardinal);
+      }
     }
-    this.links[options.id] = link;
+    canvas.links[options.id] = link;
 
     return link;
   }
 
   removeLink(options) {
-    if (options.id in this.links) {
-      this.links[options.id].remove();
+    const { canvas } = this;
+    if (options.id in canvas.links) {
+      canvas.links[options.id].remove();
     }
   }
 
   expand(id) {
-    if (id in this.containers) {
-      this.containers[id].expand();
+    const { canvas } = this;
+    if (id in canvas.linkableShapes) {
+      canvas.linkableShapes[id].expand();
     }
   }
 
   collapse(id) {
-    if (id in this.containers) {
-      this.containers[id].collapse();
+    const { canvas } = this;
+    if (id in canvas.linkableShapes) {
+      canvas.linkableShapes[id].collapse();
     }
   }
 
@@ -324,21 +369,21 @@ export default class ProcessGraph {
   }
 
   async onDragEnter(event) {
-    // The immersiveFrame in which this PG is injected is messing up the mouse x,y coordinates.
-    const canvasAbsolutePosition = this.canvasElement.getBoundingClientRect();
+    // The iframe in which this canvas is injected is messing up the mouse x,y coordinates.
+    const canvasAbsolutePosition = this.canvas.upperCanvasEl.getBoundingClientRect();
     const x = event.e.x - canvasAbsolutePosition.left;
     const y = event.e.y - canvasAbsolutePosition.top;
 
     const type = this.selectedChooserType.id;
     switch (type) {
-      case 'ProductFlow':
+      case 'link':
         this.tempDraggedObject = await this.addLink({
           id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
           x,
           y,
         });
         break;
-      case 'GeneralSystem':
+      case 'container':
       default: {
         this.tempDraggedObject = await this.addContainer({
           id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
@@ -357,15 +402,16 @@ export default class ProcessGraph {
   }
 
   async onDragOver(event) {
+    const { canvas } = this;
     // The immersiveFrame in which this PG is injected is messing up the mouse x,y coordinates.
-    const canvasAbsolutePosition = this.canvasElement.getBoundingClientRect();
+    const canvasAbsolutePosition = this.canvas.upperCanvasEl.getBoundingClientRect();
     let x = event.e.x - canvasAbsolutePosition.left;
     let y = event.e.y - canvasAbsolutePosition.top;
 
     if (this.tempDraggedObject !== null) {
       const type = this.selectedChooserType.id;
       switch (type) {
-        case 'ProductFlow':
+        case 'link':
           this.tempDraggedObject.updatePath({
             start: {
               x: x - 50,
@@ -380,15 +426,15 @@ export default class ProcessGraph {
           this.tempDraggedObject.arrowHead.fire('moving');
           this.tempDraggedObject.arrowTail.fire('moving');
           break;
-        case 'GeneralSystem':
+        case 'container':
         default: {
           if (this.tempDraggedObject.isLoaded) {
             x -= (this.tempDraggedObject.shape.width / 2);
             y -= (this.tempDraggedObject.shape.height / 2);
 
             // Grid effects
-            if (this.pg.grid) {
-              const { grid } = this.pg;
+            if (this.grid) {
+              const { grid } = this;
               x = Math.round(x / grid) * grid;
               y = Math.round(y / grid) * grid;
             }
@@ -404,9 +450,9 @@ export default class ProcessGraph {
             // Detect intersection with Links
 
             // Detect intersection with Containers
-            const ids = Object.keys(this.containers);
+            const ids = Object.keys(canvas.linkableShapes);
             for (let c = 0; c < ids.length; c += 1) {
-              const container = this.containers[ids[c]];
+              const container = canvas.linkableShapes[ids[c]];
               if (container.id !== this.tempDraggedObject.id) {
                 const cX = this.tempDraggedObject.shape.left + this.tempDraggedObject.shape.width / 2;
                 const cY = this.tempDraggedObject.shape.top;
@@ -432,13 +478,13 @@ export default class ProcessGraph {
     if (this.tempDraggedObject !== null) {
       const type = this.selectedChooserType.id;
       switch (type) {
-        case 'ProductFlow':
+        case 'link':
           this.removeLink({
             id: this.tempDraggedObject.id,
           });
           this.tempDraggedObject = null;
           break;
-        case 'GeneralSystem':
+        case 'container':
         default: {
           if (this.tempDraggedObject.isLoaded) {
             this.removeContainer({
@@ -454,14 +500,15 @@ export default class ProcessGraph {
   }
 
   async onDrop(event) {
+    const { canvas } = this;
     // The immersiveFrame in which this PG is injected is messing up the mouse x,y coordinates.
-    const canvasAbsolutePosition = this.canvasElement.getBoundingClientRect();
+    const canvasAbsolutePosition = this.canvas.upperCanvasEl.getBoundingClientRect();
     let x = event.e.x - canvasAbsolutePosition.left;
     let y = event.e.y - canvasAbsolutePosition.top;
 
     const type = this.selectedChooserType.id;
     switch (type) {
-      case 'ProductFlow':
+      case 'link':
         // Remove ghost object
         if (this.tempDraggedObject !== null) {
           this.removeLink({
@@ -479,17 +526,17 @@ export default class ProcessGraph {
         });
 
         break;
-      case 'GeneralSystem':
+      case 'container':
       default: {
         // Detect intersection with Containers
-        const ids = Object.keys(this.containers);
+        const ids = Object.keys(canvas.linkableShapes);
         for (let c = 0; c < ids.length; c += 1) {
-          const container = this.containers[ids[c]];
+          const container = canvas.linkableShapes[ids[c]];
           if (container.id !== this.tempDraggedObject.id) {
             container.setActive(false);
 
             if (container.shape.intersectsWithObject(this.tempDraggedObject.shape)) {
-
+              console.log('add as children');
             }
           }
         }
@@ -520,8 +567,8 @@ export default class ProcessGraph {
         y -= (newContainer.shape.height / 2);
 
         // Grid effects
-        if (this.pg.grid) {
-          const { grid } = this.pg;
+        if (this.grid) {
+          const { grid } = this;
           x = Math.round(x / grid) * grid;
           y = Math.round(y / grid) * grid;
         }
