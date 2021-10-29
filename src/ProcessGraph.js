@@ -366,6 +366,12 @@ export default class ProcessGraph {
     }
   }
 
+  /**
+   * @param {Object} type
+   * @param {String} type.id - 'container' | 'link'
+   * @param {String} type.label - a default label
+   * @param {String} type.icon - a default icon
+   */
   setSelectedChooserType(type) {
     this.selectedChooserType = type;
   }
@@ -565,7 +571,7 @@ export default class ProcessGraph {
               {
                 id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
                 img: {
-                  src: 'caca',
+                  src: this.selectedChooserType.icon,
                 },
                 hideText: false,
               },
