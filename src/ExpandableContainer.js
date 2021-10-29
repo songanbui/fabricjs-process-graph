@@ -38,7 +38,7 @@ export default class ExpandableContainer extends LinkableShape {
     super(newOptions);
 
     this.shapes = {};
-    this.children = Array.isArray(options.children) ? options.children : [];
+    this.children = {};
     this.isExpanded = false;
   }
 
@@ -134,7 +134,7 @@ export default class ExpandableContainer extends LinkableShape {
           fontFamily: 'Helvetica',
           textAlign: 'left',
           splitByGrapheme: true,
-
+          fill: '#000',
           originX: 'left',
           originY: 'center',
           left: padding + oImg.width + margin,
@@ -150,7 +150,7 @@ export default class ExpandableContainer extends LinkableShape {
           fontFamily: 'Helvetica',
           textAlign: 'left',
           splitByGrapheme: true,
-
+          fill: '#000',
           originX: 'left',
           originY: 'center',
           left: padding + oImg.width + margin,
@@ -167,7 +167,7 @@ export default class ExpandableContainer extends LinkableShape {
         fontFamily: 'Helvetica',
         textAlign: 'center',
         splitByGrapheme: true,
-
+        fill: '#000',
         originX: 'center',
         originY: 'center',
         left: rect.width / 2,
@@ -210,8 +210,8 @@ export default class ExpandableContainer extends LinkableShape {
     };
 
     // Construct children if this is a normal (parent) Container
-    if (!isChild) {
-      await this.constructChildren();
+    if (!isChild && Array.isArray(options.children) && options.children.length) {
+      await this.addChildren(options.children);
     }
 
     shape.on({
@@ -254,10 +254,11 @@ export default class ExpandableContainer extends LinkableShape {
     });
   }
 
-  async constructChildren() {
+  async addChildren(children) {
     const {
-      canvas, shape, shapes, children, initialOpts,
+      canvas, shape, shapes, initialOpts,
     } = this;
+    const existing = Object.keys(this.children);
 
     // Calculate new dimensions
     const padding = 10;
@@ -265,34 +266,51 @@ export default class ExpandableContainer extends LinkableShape {
 
     for (let c = 0; c < children.length; c += 1) {
       const child = children[c];
-      const childContainer = new ExpandableContainer({
-        canvas,
-        id: child.id,
-        left: shape.left + padding + (initialOpts.child.width + margin) * c + (c === children.length ? -margin : 0),
-        top: shape.top + padding + shapes.image.height + margin,
-        angle: 0,
-        label: child.label,
-        img: {
-          src: child.img.src,
-        },
-        width: initialOpts.child.width,
-        height: initialOpts.child.height,
-        hideText: child.hideText,
-      });
-      // eslint-disable-next-line no-await-in-loop
-      await childContainer.load(true);
-      child.container = childContainer;
+      if (!(child.id in this.children)) {
+        const index = (typeof child.index === 'number') ? child.index : existing.length + (c + 1);
+        const childContainer = new ExpandableContainer({
+          canvas,
+          id: child.id,
+          left: shape.left + padding + (initialOpts.child.width + margin) * c + (c === children.length ? -margin : 0),
+          top: shape.top + padding + shapes.image.height + margin,
+          angle: 0,
+          label: child.label ? child.label : index.toString(),
+          img: {
+            src: child.img.src,
+          },
+          width: initialOpts.child.width,
+          height: initialOpts.child.height,
+          hideText: child.hideText,
+        });
+        // eslint-disable-next-line no-await-in-loop
+        await childContainer.load(true);
+        this.children[child.id] = childContainer;
+        this.children[child.id].index = index;
+      }
     }
     shape.addWithUpdate();
     shape.setCoords();
     canvas.renderAll();
   }
 
+  setActive(active) {
+    if (active) {
+      this.shapes.rect.set('stroke', '#78befa');
+      this.shapes.rect.set('fill', '#78befa');
+      this.shapes.text.set('fill', '#fff');
+    } else {
+      this.shapes.rect.set('stroke', '#666');
+      this.shapes.rect.set('fill', '#fff');
+      this.shapes.text.set('fill', '#000');
+    }
+  }
+
   expand() {
-    if (this.children.length !== 0 && this.isExpanded === false) {
+    if (Object.keys(this.children).length !== 0 && this.isExpanded === false) {
       const {
-        canvas, shape, shapes, children, initialOpts,
+        canvas, shape, shapes, initialOpts,
       } = this;
+      const children = Object.values(this.children);
 
       // Calculate new dimensions
       const padding = 10;
@@ -351,13 +369,14 @@ export default class ExpandableContainer extends LinkableShape {
       shapes.text.textAlign = 'left';
       shapes.text.setCoords();
 
-      // Add children containers
-      for (let c = 0; c < children.length; c += 1) {
-        const child = children[c];
-        child.container.shape.left = shape.left + padding
-          + (initialOpts.child.width + margin) * c + (c === children.length ? -margin : 0);
-        child.container.shape.top = shape.top + padding + shapes.image.height + margin;
-        shape.addWithUpdate(child.container.shape);
+      // Add children containers in index order
+      const sorted = children.sort((c1, c2) => c1.index > c2.index);
+      for (let c = 0; c < sorted.length; c += 1) {
+        const child = sorted[c];
+        child.shape.left = shape.left + padding
+          + (initialOpts.child.width + margin) * c + (c === sorted.length ? -margin : 0);
+        child.shape.top = shape.top + padding + shapes.image.height + margin;
+        shape.addWithUpdate(child.shape);
       }
 
       // Update the container coords
@@ -373,10 +392,11 @@ export default class ExpandableContainer extends LinkableShape {
   }
 
   collapse() {
-    if (this.children.length !== 0 && this.isExpanded === true) {
+    if (Object.keys(this.children).length !== 0 && this.isExpanded === true) {
       const {
-        canvas, shape, shapes, children, initialOpts,
+        canvas, shape, shapes, initialOpts,
       } = this;
+      const children = Object.values(this.children);
 
       // Calculate new dimensions
       const padding = 10;
@@ -436,10 +456,10 @@ export default class ExpandableContainer extends LinkableShape {
       // Remove children containers
       for (let c = 0; c < children.length; c += 1) {
         const child = children[c];
-        child.container.left = shape.left + padding
+        child.left = shape.left + padding
           + (initialOpts.child.width + margin) * c + (c === children.length ? -margin : 0);
-        child.container.top = shape.top + padding + shapes.image.height + margin;
-        shape.remove(child.container.shape);
+        child.top = shape.top + padding + shapes.image.height + margin;
+        shape.remove(child.shape);
       }
 
       // Update the container coords

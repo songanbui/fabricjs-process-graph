@@ -1,4 +1,7 @@
-const { fabric } = window;
+import ExpandableContainer from './ExpandableContainer.js';
+import CurvedLink from './CurvedLink.js';
+
+const { fabric, _ } = window;
 
 export default class ProcessGraph {
   /**
@@ -18,6 +21,10 @@ export default class ProcessGraph {
     this.handlers = {
       grid: {},
     };
+    this.dragGhostObject = null;
+    this.dragGhostLinkEast = null;
+    this.dragGhostLinkWest = null;
+    this.selectedChooserType = null;
 
     // Initialize Canvas
     const canvas = this.canvas = options.canvas ? options.canvas : new fabric.Canvas(options.canvasOpts.el, options.canvasOpts.options);
@@ -70,6 +77,10 @@ export default class ProcessGraph {
     canvas.on({
       'selection:created': onSelection,
       'selection:updated': onSelection,
+      dragenter: this.onDragEnter.bind(this),
+      dragover: this.onDragOver.bind(this),
+      dragleave: this.onDragLeave.bind(this),
+      drop: this.onDrop.bind(this),
     });
   }
 
@@ -230,5 +241,437 @@ export default class ProcessGraph {
         canvas.on(this.handlers.grid);
       }
     });
+  }
+
+  /**
+   *
+   * @param {Object} objects
+   * @param {Array} objects.containers
+   * @param {Array} objects.links
+   * @returns {Promise<void>}
+   */
+  async load(objects) {
+    const { canvas } = this;
+
+    // Containers
+    for (let c = 0; c < objects.containers.length; c += 1) {
+      const opts = _.cloneDeep(objects.containers[c]);
+      opts.canvas = canvas;
+      // eslint-disable-next-line no-await-in-loop
+      await this.addContainer(opts);
+    }
+
+    // Links
+    for (let l = 0; l < objects.links.length; l += 1) {
+      const opts = _.cloneDeep(objects.links[l]);
+      opts.canvas = canvas;
+      // eslint-disable-next-line no-await-in-loop
+      await this.addLink(opts);
+    }
+  }
+
+  async addContainer(options) {
+    const { canvas } = this;
+    const containerOpts = {
+      id: options.id,
+      canvas,
+      left: options.left || 0,
+      top: options.top || 0,
+      angle: 0,
+      label: options.label,
+      img: {
+        src: options.img.src,
+      },
+      childWidth: 72,
+      childHeight: 42,
+      children: Array.isArray(options.children) ? options.children : [],
+    };
+    const container = new ExpandableContainer(containerOpts);
+    // eslint-disable-next-line no-await-in-loop
+    await container.load();
+    container.collapse();
+    container.inject();
+    if (options.isTemporary) {
+      container.shape.set('opacity', 0.5);
+    }
+    if (options.x && options.y) {
+      container.move({
+        x: options.x,
+        y: options.y,
+        moving: false,
+      });
+    }
+    canvas.linkableShapes[options.id] = container;
+    return container;
+  }
+
+  removeContainer(options) {
+    const { canvas } = this;
+    if (options.id in canvas.linkableShapes) {
+      canvas.linkableShapes[options.id].remove();
+    }
+  }
+
+  async addLink(options) {
+    const { canvas } = this;
+    const linkOpts = {
+      id: options.id,
+      canvas,
+      start: {
+        x: options.start.x || 0,
+        y: options.start.y || 0,
+      },
+      end: {
+        x: options.end.x || 0,
+        y: options.end.y || 0,
+      },
+    };
+    const link = new CurvedLink(linkOpts);
+    link.inject(canvas);
+
+    if (!options.isTemporary) {
+      link.arrowHead.fire('moved');
+      link.arrowTail.fire('moved');
+
+      if (options.start && options.start.id && options.start.cardinal) {
+        link.connectLink('start', options.start.id, options.start.cardinal);
+      }
+      if (options.end && options.end.id && options.end.cardinal) {
+        link.connectLink('end', options.end.id, options.end.cardinal);
+      }
+    }
+    canvas.links[options.id] = link;
+
+    return link;
+  }
+
+  removeLink(options) {
+    const { canvas } = this;
+    if (options.id in canvas.links) {
+      canvas.links[options.id].remove();
+    }
+  }
+
+  expand(id) {
+    const { canvas } = this;
+    if (id in canvas.linkableShapes) {
+      canvas.linkableShapes[id].expand();
+    }
+  }
+
+  collapse(id) {
+    const { canvas } = this;
+    if (id in canvas.linkableShapes) {
+      canvas.linkableShapes[id].collapse();
+    }
+  }
+
+  setSelectedChooserType(type) {
+    this.selectedChooserType = type;
+  }
+
+  async onDragEnter(event) {
+    // The iframe in which this canvas is injected is messing up the mouse x,y coordinates.
+    const canvasAbsolutePosition = this.canvas.upperCanvasEl.getBoundingClientRect();
+    const x = event.e.x - canvasAbsolutePosition.left;
+    const y = event.e.y - canvasAbsolutePosition.top;
+
+    const type = this.selectedChooserType.id;
+    switch (type) {
+      case 'link':
+        this.dragGhostObject = await this.addLink({
+          id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
+          start: {
+            x: x - 50,
+            y,
+          },
+          end: {
+            x: x + 50,
+            y,
+          },
+        });
+        break;
+      case 'container':
+      default: {
+        this.dragGhostObject = await this.addContainer({
+          id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
+          label: this.selectedChooserType.label,
+          img: {
+            src: this.selectedChooserType.icon,
+          },
+          x: 0,
+          y: 0,
+          isTemporary: true,
+        });
+        break;
+      }
+    }
+    event.e.preventDefault();
+  }
+
+  async onDragOver(event) {
+    const { canvas } = this;
+    // The immersiveFrame in which this PG is injected is messing up the mouse x,y coordinates.
+    const canvasAbsolutePosition = this.canvas.upperCanvasEl.getBoundingClientRect();
+    let x = event.e.x - canvasAbsolutePosition.left;
+    let y = event.e.y - canvasAbsolutePosition.top;
+
+    if (this.dragGhostObject !== null) {
+      const type = this.selectedChooserType.id;
+      switch (type) {
+        case 'link':
+          this.dragGhostObject.updatePath({
+            start: {
+              x: x - 50,
+              y,
+            },
+            end: {
+              x: x + 50,
+              y,
+            },
+            commit: false,
+          });
+          this.dragGhostObject.arrowHead.fire('moving');
+          this.dragGhostObject.arrowTail.fire('moving');
+          break;
+        case 'container':
+        default: {
+          if (this.dragGhostObject.isLoaded) {
+            x -= (this.dragGhostObject.shape.width / 2);
+            y -= (this.dragGhostObject.shape.height / 2);
+
+            // Grid effects
+            if (this.grid) {
+              const { grid } = this;
+              x = Math.round(x / grid) * grid;
+              y = Math.round(y / grid) * grid;
+            }
+
+            // Move object
+            this.dragGhostObject.move({
+              x,
+              y,
+              moving: true,
+              skipCollision: true,
+            });
+
+            let hasCollision = false;
+
+            // Detect intersection with Links
+            const linkIds = Object.keys(canvas.links);
+            for (let c = 0; c < linkIds.length; c += 1) {
+              const link = canvas.links[linkIds[c]];
+              link.setActive(false);
+              if (!hasCollision && link.path.intersectsWithObject(this.dragGhostObject.shape)) {
+                const hasEnoughClearance = !link.start.shape.intersectsWithObject(this.dragGhostObject.shape)
+                  && !link.end.shape.intersectsWithObject(this.dragGhostObject.shape);
+                if (hasEnoughClearance) {
+                  link.setActive(true);
+                  hasCollision = true;
+                }
+              }
+            }
+
+            // Detect intersection with Containers
+            const ids = Object.keys(canvas.linkableShapes);
+            for (let c = 0; c < ids.length; c += 1) {
+              const container = canvas.linkableShapes[ids[c]];
+              container.setActive(false);
+              if (!hasCollision && container.id !== this.dragGhostObject.id
+                && container.shape.intersectsWithObject(this.dragGhostObject.shape)) {
+                container.setActive(true);
+                hasCollision = true;
+              }
+            }
+          }
+          break;
+        }
+      }
+    }
+    event.e.preventDefault();
+  }
+
+  async onDragLeave(event) {
+    if (this.dragGhostObject !== null) {
+      const type = this.selectedChooserType.id;
+      switch (type) {
+        case 'link':
+          this.removeLink({
+            id: this.dragGhostObject.id,
+          });
+          this.dragGhostObject = null;
+          break;
+        case 'container':
+        default: {
+          if (this.dragGhostObject.isLoaded) {
+            this.removeContainer({
+              id: this.dragGhostObject.id,
+            });
+            this.dragGhostObject = null;
+          }
+          break;
+        }
+      }
+    }
+    event.e.preventDefault();
+  }
+
+  async onDrop(event) {
+    const { canvas } = this;
+    // The immersiveFrame in which this PG is injected is messing up the mouse x,y coordinates.
+    const canvasAbsolutePosition = this.canvas.upperCanvasEl.getBoundingClientRect();
+    let x = event.e.x - canvasAbsolutePosition.left;
+    let y = event.e.y - canvasAbsolutePosition.top;
+
+    const type = this.selectedChooserType.id;
+    switch (type) {
+      case 'link':
+        // Remove ghost object
+        if (this.dragGhostObject !== null) {
+          this.removeLink({
+            id: this.dragGhostObject.id,
+          });
+          this.dragGhostObject = null;
+        }
+
+        // Instantiate new object
+        await this.addLink({
+          id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
+          start: {
+            x: x - 50,
+            y,
+          },
+          end: {
+            x: x + 50,
+            y,
+          },
+          isTemporary: false,
+        });
+
+        break;
+      case 'container':
+      default: {
+        let added = false;
+
+        // Add as Child Container if intersecting with an existing Container
+        const ids = Object.keys(canvas.linkableShapes);
+        for (let c = 0; c < ids.length; c += 1) {
+          const container = canvas.linkableShapes[ids[c]];
+          container.setActive(false);
+          if (!added && container.id !== this.dragGhostObject.id
+            && container.shape.intersectsWithObject(this.dragGhostObject.shape)) {
+            // eslint-disable-next-line no-await-in-loop
+            await container.addChildren([
+              {
+                id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
+                img: {
+                  src: 'caca',
+                },
+                hideText: false,
+              },
+            ]);
+            container.collapse();
+            container.expand();
+            added = true;
+          }
+        }
+
+        // Remove ghost object
+        if (this.dragGhostObject !== null) {
+          this.removeContainer({
+            id: this.dragGhostObject.id,
+          });
+          this.dragGhostObject = null;
+        }
+
+        // Add as new normal Container
+        if (!added) {
+          const opts = {
+            id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
+            label: this.selectedChooserType.label,
+            img: {
+              src: this.selectedChooserType.icon,
+            },
+            x,
+            y,
+            isTemporary: false,
+          };
+          const newContainer = await this.addContainer(opts);
+
+          // Calculate new position
+          x -= (newContainer.shape.width / 2);
+          y -= (newContainer.shape.height / 2);
+
+          // Grid effects
+          if (this.grid) {
+            const { grid } = this;
+            x = Math.round(x / grid) * grid;
+            y = Math.round(y / grid) * grid;
+          }
+
+          // Move object under the mouse cursor
+          newContainer.move({
+            x,
+            y,
+            moving: true,
+          });
+          newContainer.move({ // for handling collisions
+            moving: false,
+          });
+
+          // Detect intersection with Links
+          const linkIds = Object.keys(canvas.links);
+          for (let c = 0; c < linkIds.length; c += 1) {
+            const link = canvas.links[linkIds[c]];
+            link.setActive(false);
+            if (!added && link.path.intersectsWithObject(newContainer.shape)) {
+              const hasEnoughClearance = !link.start.shape.intersectsWithObject(newContainer.shape)
+                && !link.end.shape.intersectsWithObject(newContainer.shape);
+              if (hasEnoughClearance) {
+                // Create two new links that will replace the overlapped one
+                // eslint-disable-next-line no-await-in-loop
+                await this.addLink({
+                  id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
+                  start: {
+                    id: link.start.shape.id,
+                    cardinal: link.start.anchor,
+                  },
+                  end: {
+                    id: newContainer.id,
+                    cardinal: newContainer.shape.left > link.start.shape.left ? 'west' : 'east',
+                  },
+                  isTemporary: false,
+                });
+                // eslint-disable-next-line no-await-in-loop
+                await this.addLink({
+                  id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
+                  start: {
+                    id: newContainer.id,
+                    cardinal: newContainer.shape.left > link.start.shape.left ? 'east' : 'west',
+                  },
+                  end: {
+                    id: link.end.shape.id,
+                    cardinal: link.end.anchor,
+                  },
+                  isTemporary: false,
+                });
+
+                // Remove old link
+                this.removeLink({
+                  id: link.id,
+                });
+                added = true;
+              }
+            }
+          }
+
+          added = true;
+        }
+
+        break;
+      }
+    }
+
+    event.e.preventDefault();
   }
 }
