@@ -130,6 +130,16 @@ export default class CurvedLink {
         this.toggleAllAnchorsOpacity(0);
       });
     });
+    arrowHead.on('mouseover', () => {
+      arrowHead.set('fill', '#78befa');
+      arrowHead.set('stroke', '#78befa');
+      canvas.renderAll();
+    });
+    arrowHead.on('mouseout', () => {
+      arrowHead.set('fill', '#ddd');
+      arrowHead.set('stroke', '#999');
+      canvas.renderAll();
+    });
 
     // Start point (arrowTail)
     const arrowTailOpts = {
@@ -178,6 +188,16 @@ export default class CurvedLink {
       arrowTail.on('mouseup', () => {
         this.toggleAllAnchorsOpacity(0);
       });
+    });
+    arrowTail.on('mouseover', () => {
+      arrowTail.set('fill', '#78befa');
+      arrowTail.set('stroke', '#78befa');
+      canvas.renderAll();
+    });
+    arrowTail.on('mouseout', () => {
+      arrowTail.set('fill', '#ddd');
+      arrowTail.set('stroke', '#999');
+      canvas.renderAll();
     });
   }
 
@@ -258,7 +278,7 @@ export default class CurvedLink {
             commit: false,
           };
           opts[linkPoint] = {
-            x: shape.anchors[cardinal].left,
+            x: shape.anchors[cardinal].left + (cardinal === 'east' ? 10 : -10),
             y: shape.anchors[cardinal].top,
           };
           this.updatePath(opts);
@@ -268,7 +288,7 @@ export default class CurvedLink {
             commit: true,
           };
           opts[linkPoint] = {
-            x: shape.anchors[cardinal].left,
+            x: shape.anchors[cardinal].left + (cardinal === 'east' ? 10 : -10),
             y: shape.anchors[cardinal].top,
           };
           this.updatePath(opts);
@@ -284,7 +304,7 @@ export default class CurvedLink {
       commit: true,
     };
     opts[linkPoint] = {
-      x: shape.anchors[cardinal].left,
+      x: shape.anchors[cardinal].left + (cardinal === 'east' ? 10 : -10),
       y: shape.anchors[cardinal].top,
     };
     this.updatePath(opts);

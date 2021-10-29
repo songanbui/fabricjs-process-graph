@@ -341,6 +341,7 @@ export default class ProcessGraph {
       }
     }
     canvas.links[options.id] = link;
+    link.updatePath({ commit: true });
 
     return link;
   }

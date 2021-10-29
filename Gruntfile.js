@@ -4,7 +4,7 @@ module.exports = function Gruntfile(grunt) {
     browserify: {
       dist: {
         files: {
-          'dist/<%= pkg.name %>.compiled.js': 'index.js',
+          'dist/<%= pkg.name %>.compiled.js': 'build.js',
         },
         options: {
           transform: [
