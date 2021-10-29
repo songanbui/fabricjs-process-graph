@@ -21,7 +21,9 @@ export default class ProcessGraph {
     this.handlers = {
       grid: {},
     };
-    this.tempDraggedObject = null;
+    this.dragGhostObject = null;
+    this.dragGhostLinkEast = null;
+    this.dragGhostLinkWest = null;
     this.selectedChooserType = null;
 
     // Initialize Canvas
@@ -377,15 +379,21 @@ export default class ProcessGraph {
     const type = this.selectedChooserType.id;
     switch (type) {
       case 'link':
-        this.tempDraggedObject = await this.addLink({
+        this.dragGhostObject = await this.addLink({
           id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
-          x,
-          y,
+          start: {
+            x: x - 50,
+            y,
+          },
+          end: {
+            x: x + 50,
+            y,
+          },
         });
         break;
       case 'container':
       default: {
-        this.tempDraggedObject = await this.addContainer({
+        this.dragGhostObject = await this.addContainer({
           id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
           label: this.selectedChooserType.label,
           img: {
@@ -408,11 +416,11 @@ export default class ProcessGraph {
     let x = event.e.x - canvasAbsolutePosition.left;
     let y = event.e.y - canvasAbsolutePosition.top;
 
-    if (this.tempDraggedObject !== null) {
+    if (this.dragGhostObject !== null) {
       const type = this.selectedChooserType.id;
       switch (type) {
         case 'link':
-          this.tempDraggedObject.updatePath({
+          this.dragGhostObject.updatePath({
             start: {
               x: x - 50,
               y,
@@ -423,14 +431,14 @@ export default class ProcessGraph {
             },
             commit: false,
           });
-          this.tempDraggedObject.arrowHead.fire('moving');
-          this.tempDraggedObject.arrowTail.fire('moving');
+          this.dragGhostObject.arrowHead.fire('moving');
+          this.dragGhostObject.arrowTail.fire('moving');
           break;
         case 'container':
         default: {
-          if (this.tempDraggedObject.isLoaded) {
-            x -= (this.tempDraggedObject.shape.width / 2);
-            y -= (this.tempDraggedObject.shape.height / 2);
+          if (this.dragGhostObject.isLoaded) {
+            x -= (this.dragGhostObject.shape.width / 2);
+            y -= (this.dragGhostObject.shape.height / 2);
 
             // Grid effects
             if (this.grid) {
@@ -440,30 +448,39 @@ export default class ProcessGraph {
             }
 
             // Move object
-            this.tempDraggedObject.move({
+            this.dragGhostObject.move({
               x,
               y,
               moving: true,
               skipCollision: true,
             });
 
+            let hasCollision = false;
+
             // Detect intersection with Links
+            const linkIds = Object.keys(canvas.links);
+            for (let c = 0; c < linkIds.length; c += 1) {
+              const link = canvas.links[linkIds[c]];
+              link.setActive(false);
+              if (!hasCollision && link.path.intersectsWithObject(this.dragGhostObject.shape)) {
+                const hasEnoughClearance = !link.start.shape.intersectsWithObject(this.dragGhostObject.shape)
+                  && !link.end.shape.intersectsWithObject(this.dragGhostObject.shape);
+                if (hasEnoughClearance) {
+                  link.setActive(true);
+                  hasCollision = true;
+                }
+              }
+            }
 
             // Detect intersection with Containers
             const ids = Object.keys(canvas.linkableShapes);
             for (let c = 0; c < ids.length; c += 1) {
               const container = canvas.linkableShapes[ids[c]];
-              if (container.id !== this.tempDraggedObject.id) {
-                const cX = this.tempDraggedObject.shape.left + this.tempDraggedObject.shape.width / 2;
-                const cY = this.tempDraggedObject.shape.top;
-                if (container.shape.intersectsWithRect(
-                  new fabric.Point(cX - 5, cY),
-                  new fabric.Point(cX + 5, cY + 10),
-                )) {
-                  container.setActive(true);
-                } else {
-                  container.setActive(false);
-                }
+              container.setActive(false);
+              if (!hasCollision && container.id !== this.dragGhostObject.id
+                && container.shape.intersectsWithObject(this.dragGhostObject.shape)) {
+                container.setActive(true);
+                hasCollision = true;
               }
             }
           }
@@ -475,22 +492,22 @@ export default class ProcessGraph {
   }
 
   async onDragLeave(event) {
-    if (this.tempDraggedObject !== null) {
+    if (this.dragGhostObject !== null) {
       const type = this.selectedChooserType.id;
       switch (type) {
         case 'link':
           this.removeLink({
-            id: this.tempDraggedObject.id,
+            id: this.dragGhostObject.id,
           });
-          this.tempDraggedObject = null;
+          this.dragGhostObject = null;
           break;
         case 'container':
         default: {
-          if (this.tempDraggedObject.isLoaded) {
+          if (this.dragGhostObject.isLoaded) {
             this.removeContainer({
-              id: this.tempDraggedObject.id,
+              id: this.dragGhostObject.id,
             });
-            this.tempDraggedObject = null;
+            this.dragGhostObject = null;
           }
           break;
         }
@@ -510,78 +527,146 @@ export default class ProcessGraph {
     switch (type) {
       case 'link':
         // Remove ghost object
-        if (this.tempDraggedObject !== null) {
+        if (this.dragGhostObject !== null) {
           this.removeLink({
-            id: this.tempDraggedObject.id,
+            id: this.dragGhostObject.id,
           });
-          this.tempDraggedObject = null;
+          this.dragGhostObject = null;
         }
 
         // Instantiate new object
         await this.addLink({
           id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
-          x,
-          y,
+          start: {
+            x: x - 50,
+            y,
+          },
+          end: {
+            x: x + 50,
+            y,
+          },
           isTemporary: false,
         });
 
         break;
       case 'container':
       default: {
-        // Detect intersection with Containers
+        let added = false;
+
+        // Add as Child Container if intersecting with an existing Container
         const ids = Object.keys(canvas.linkableShapes);
         for (let c = 0; c < ids.length; c += 1) {
           const container = canvas.linkableShapes[ids[c]];
-          if (container.id !== this.tempDraggedObject.id) {
-            container.setActive(false);
-
-            if (container.shape.intersectsWithObject(this.tempDraggedObject.shape)) {
-              console.log('add as children');
-            }
+          container.setActive(false);
+          if (!added && container.id !== this.dragGhostObject.id
+            && container.shape.intersectsWithObject(this.dragGhostObject.shape)) {
+            // eslint-disable-next-line no-await-in-loop
+            await container.addChildren([
+              {
+                id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
+                img: {
+                  src: 'caca',
+                },
+                hideText: false,
+              },
+            ]);
+            container.collapse();
+            container.expand();
+            added = true;
           }
         }
 
         // Remove ghost object
-        if (this.tempDraggedObject !== null) {
+        if (this.dragGhostObject !== null) {
           this.removeContainer({
-            id: this.tempDraggedObject.id,
+            id: this.dragGhostObject.id,
           });
-          this.tempDraggedObject = null;
+          this.dragGhostObject = null;
         }
 
-        // Instantiate new object
-        const opts = {
-          id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
-          label: this.selectedChooserType.label,
-          img: {
-            src: this.selectedChooserType.icon,
-          },
-          x,
-          y,
-          isTemporary: false,
-        };
-        const newContainer = await this.addContainer(opts);
+        // Add as new normal Container
+        if (!added) {
+          const opts = {
+            id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
+            label: this.selectedChooserType.label,
+            img: {
+              src: this.selectedChooserType.icon,
+            },
+            x,
+            y,
+            isTemporary: false,
+          };
+          const newContainer = await this.addContainer(opts);
 
-        // Calculate new position
-        x -= (newContainer.shape.width / 2);
-        y -= (newContainer.shape.height / 2);
+          // Calculate new position
+          x -= (newContainer.shape.width / 2);
+          y -= (newContainer.shape.height / 2);
 
-        // Grid effects
-        if (this.grid) {
-          const { grid } = this;
-          x = Math.round(x / grid) * grid;
-          y = Math.round(y / grid) * grid;
+          // Grid effects
+          if (this.grid) {
+            const { grid } = this;
+            x = Math.round(x / grid) * grid;
+            y = Math.round(y / grid) * grid;
+          }
+
+          // Move object under the mouse cursor
+          newContainer.move({
+            x,
+            y,
+            moving: true,
+          });
+          newContainer.move({ // for handling collisions
+            moving: false,
+          });
+
+          // Detect intersection with Links
+          const linkIds = Object.keys(canvas.links);
+          for (let c = 0; c < linkIds.length; c += 1) {
+            const link = canvas.links[linkIds[c]];
+            link.setActive(false);
+            if (!added && link.path.intersectsWithObject(newContainer.shape)) {
+              const hasEnoughClearance = !link.start.shape.intersectsWithObject(newContainer.shape)
+                && !link.end.shape.intersectsWithObject(newContainer.shape);
+              if (hasEnoughClearance) {
+                // Create two new links that will replace the overlapped one
+                // eslint-disable-next-line no-await-in-loop
+                await this.addLink({
+                  id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
+                  start: {
+                    id: link.start.shape.id,
+                    cardinal: link.start.anchor,
+                  },
+                  end: {
+                    id: newContainer.id,
+                    cardinal: newContainer.shape.left > link.start.shape.left ? 'west' : 'east',
+                  },
+                  isTemporary: false,
+                });
+                // eslint-disable-next-line no-await-in-loop
+                await this.addLink({
+                  id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
+                  start: {
+                    id: newContainer.id,
+                    cardinal: newContainer.shape.left > link.start.shape.left ? 'east' : 'west',
+                  },
+                  end: {
+                    id: link.end.shape.id,
+                    cardinal: link.end.anchor,
+                  },
+                  isTemporary: false,
+                });
+
+                // Remove old link
+                this.removeLink({
+                  id: link.id,
+                });
+                added = true;
+              }
+            }
+          }
+
+          added = true;
         }
-
-        // Move object under the mouse cursor
-        newContainer.move({
-          x,
-          y,
-          moving: true,
-        });
-        newContainer.move({ // for handling collisions
-          moving: false,
-        });
 
         break;
       }

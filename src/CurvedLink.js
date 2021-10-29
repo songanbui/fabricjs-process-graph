@@ -229,9 +229,10 @@ export default class CurvedLink {
     canvas.remove(isValidHeadConnectionMask);
     canvas.remove(arrowHead);
     canvas.remove(arrowTail);
-
     canvas.remove(path);
 
+    this.disconnectLink('start');
+    this.disconnectLink('end');
     delete canvas.links[id];
   }
 
@@ -280,7 +281,7 @@ export default class CurvedLink {
 
     // Update Link
     const opts = {
-      commit: false,
+      commit: true,
     };
     opts[linkPoint] = {
       x: shape.anchors[cardinal].left,
@@ -307,6 +308,24 @@ export default class CurvedLink {
     canvas.bringToFront(path);
     canvas.bringToFront(arrowHead);
     canvas.bringToFront(arrowTail);
+  }
+
+  setActive(active) {
+    const {
+      path,
+      arrowHead,
+      arrowTail,
+    } = this;
+
+    if (active) {
+      path.set('stroke', '#78befa');
+      arrowHead.set('stroke', '#78befa');
+      arrowTail.set('stroke', '#78befa');
+    } else {
+      path.set('stroke', '#999');
+      arrowHead.set('stroke', '#999');
+      arrowTail.set('stroke', '#999');
+    }
   }
 
   computePathCoords(options) {

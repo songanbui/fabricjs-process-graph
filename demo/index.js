@@ -27,7 +27,7 @@ const main = async function main() {
     processGraph.setSelectedChooserType({
       id: 'container',
       label: 'General System',
-      icon: '',
+      icon: 'caca',
     });
   });
   const draggableLink = document.getElementById('pg-chooser-link');
@@ -39,7 +39,7 @@ const main = async function main() {
     processGraph.setSelectedChooserType({
       id: 'link',
       label: 'Product Flow',
-      icon: '',
+      icon: 'caca',
     });
   });
 
@@ -60,7 +60,6 @@ const main = async function main() {
         children: [
           {
             id: 'c11',
-            label: '1',
             index: 1,
             img: {
               src: 'caca',
@@ -69,7 +68,6 @@ const main = async function main() {
           },
           {
             id: 'c12',
-            label: '2',
             index: 2,
             img: {
               src: 'caca',
@@ -78,7 +76,6 @@ const main = async function main() {
           },
           {
             id: 'c13',
-            label: '3',
             index: 3,
             img: {
               src: 'caca',
@@ -101,7 +98,6 @@ const main = async function main() {
         children: [
           {
             id: 'c21',
-            label: '1',
             index: 1,
             img: {
               src: 'caca',
@@ -110,7 +106,6 @@ const main = async function main() {
           },
           {
             id: 'c22',
-            label: '2',
             index: 2,
             img: {
               src: 'caca',
@@ -119,7 +114,6 @@ const main = async function main() {
           },
           {
             id: 'c23',
-            label: '3',
             index: 3,
             img: {
               src: 'caca',
