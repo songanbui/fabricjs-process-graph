@@ -246,11 +246,18 @@ export default class ExpandableContainer extends LinkableShape {
   }
 
   async _loadImage(src) {
+    const { canvas } = this;
     const url = src || this.options.img.src;
+
     return new Promise((resolve) => {
-      fabric.Image.fromURL(url, (oImg) => {
-        resolve(oImg);
-      });
+      if (!(url in canvas.cachedImages)) {
+        fabric.Image.fromURL(url, (oImg) => {
+          canvas.cachedImages[url] = oImg;
+          resolve(fabric.util.object.clone(canvas.cachedImages[url]));
+        });
+      } else {
+        resolve(fabric.util.object.clone(canvas.cachedImages[url]));
+      }
     });
   }
 

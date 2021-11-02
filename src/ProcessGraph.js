@@ -35,6 +35,7 @@ export default class ProcessGraph {
     canvas.set('stopContextMenu', true);
     canvas.linkableShapes = {};
     canvas.links = {};
+    canvas.cachedImages = {};
 
     // Set grid
     if (typeof options.grid === 'number') {
@@ -74,14 +75,24 @@ export default class ProcessGraph {
       }
     };
 
+    // Selection events
     canvas.on({
       'selection:created': onSelection,
       'selection:updated': onSelection,
+    });
+
+    // Drag and Drop events
+    canvas.on({
       dragenter: this.onDragEnter.bind(this),
       dragover: this.onDragOver.bind(this),
       dragleave: this.onDragLeave.bind(this),
       drop: this.onDrop.bind(this),
     });
+
+    // // Canvas panning (middle mouse click)
+    // canvas.on({
+    //   'mouse:down': this.onMouseDownForPanning.bind(this),
+    // });
   }
 
   /**
@@ -97,7 +108,7 @@ export default class ProcessGraph {
     this.grid = options.grid;
     const { canvas } = this;
     /* eslint-disable no-multi-str */
-    const data = `<svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg"> \
+    const data = `<svg width="${10 * this.grid}" height="${10 * this.grid}" xmlns="http://www.w3.org/2000/svg"> \
         <defs> \
             <pattern id="smallGrid" width="${this.grid}" height="${this.grid}" patternUnits="userSpaceOnUse"> \
                 <path d="M ${this.grid} 0 L 0 0 0 ${this.grid}" fill="none" stroke="gray" stroke-width="0.5" /> \
@@ -115,13 +126,8 @@ export default class ProcessGraph {
     const svg = new Blob([data], { type: 'image/svg+xml;charset=utf-8' });
     const url = DOMURL.createObjectURL(svg);
     fabric.util.loadImage(url, (img) => {
-      const bg = new fabric.Rect({
-        width: canvas.width, height: canvas.height, evented: false, selectable: false,
-      });
-      bg.fill = new fabric.Pattern({ source: img },
-        (() => { bg.dirty = true; canvas.requestRenderAll(); }));
-      bg.canvas = canvas;
-      canvas.set('backgroundImage', bg);
+      canvas.set('backgroundColor', new fabric.Pattern({ source: img }));
+      canvas.renderAll();
 
       // Snap to grid effects
       canvas.off(this.handlers.grid);
@@ -319,7 +325,6 @@ export default class ProcessGraph {
           const startLink = canvas.links[sId];
           endLinks.forEach(async (eId) => {
             const endLink = canvas.links[eId];
-            console.log('caca');
             await this.addLink({
               id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
               start: {
@@ -715,4 +720,89 @@ export default class ProcessGraph {
 
     event.e.preventDefault();
   }
+
+  // async onMouseDownForPanning(event) {
+  //   event.e.preventDefault();
+  //   event.e.stopPropagation();
+  //
+  //   const { canvas } = this;
+  //   if (event.e.altKey === true) {
+  //     // TODO: prevent objects from being selected and moved
+  //
+  //     // Discard multiple selection
+  //     canvas.selection = false;
+  //
+  //     // Remember start point coordinates
+  //     const startPointer = canvas.getPointer(event.e, true);
+  //     const startPoint = new fabric.Point(startPointer.x, startPointer.y);
+  //
+  //     const onMouseMoveForPanning = (moveEvent) => {
+  //       const pointer = canvas.getPointer(moveEvent.e, true);
+  //       const mouseMovePoint = new fabric.Point(pointer.x, pointer.y);
+  //       const deltaPoint = mouseMovePoint.subtract(startPoint);
+  //       // const { width, height } = canvas;
+  //       const { width, height } = { width: 0, height: 0 }; // infinite canvas
+  //       const { tl, tr, bl } = canvas.vptCoords;
+  //
+  //       if (deltaPoint.x > 0) {
+  //         if (tl.x > 0) {
+  //           canvas.relativePan(new fabric.Point(deltaPoint.x, 0));
+  //           startPoint.x = mouseMovePoint.x;
+  //         }
+  //       }
+  //       if (deltaPoint.x < 0) {
+  //         if (width === 0 || tr.x < width) {
+  //           canvas.relativePan(new fabric.Point(deltaPoint.x, 0));
+  //           startPoint.x = mouseMovePoint.x;
+  //         }
+  //       }
+  //       if (deltaPoint.y > 0) {
+  //         if (tl.y > 0) {
+  //           canvas.relativePan(new fabric.Point(0, deltaPoint.y));
+  //           startPoint.y = mouseMovePoint.y;
+  //         }
+  //       }
+  //       if (deltaPoint.y < 0) {
+  //         if (height === 0 || bl.y < height) {
+  //           canvas.relativePan(new fabric.Point(0, deltaPoint.y));
+  //           startPoint.y = mouseMovePoint.y;
+  //         }
+  //       }
+  //
+  //       // this.keepPositionInBounds();
+  //     };
+  //     const onMouseUpForPanning = () => {
+  //       canvas.setViewportTransform(canvas.viewportTransform);
+  //       canvas.selection = true;
+  //
+  //       canvas.off('mouse:up', onMouseUpForPanning);
+  //       canvas.off('mouse:move', onMouseMoveForPanning);
+  //     };
+  //
+  //     canvas.on({
+  //       'mouse:up': onMouseUpForPanning,
+  //       'mouse:move': onMouseMoveForPanning,
+  //     });
+  //   }
+  // }
+  //
+  // keepPositionInBounds() {
+  //   const { canvas } = this;
+  //   const { tl } = canvas.vptCoords;
+  //   const { width, height } = canvas;
+  //   const visibleWidth = canvas.getWidth();
+  //   const visibleHeight = canvas.getHeight();
+  //   if (visibleHeight > height * canvas.getZoom() && visibleWidth > width * canvas.getZoom()) {
+  //     if (tl.x !== 0 && tl.y !== 0) {
+  //       canvas.absolutePan(new Fabric.Point(0, 0));
+  //     }
+  //   } else {
+  //     if (tl.x < 0) {
+  //       canvas.relativePan(new Fabric.Point(tl.x, 0));
+  //     }
+  //     if (tl.y < 0) {
+  //       canvas.relativePan(new Fabric.Point(0, tl.y));
+  //     }
+  //   }
+  // }
 }

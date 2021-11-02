@@ -10,8 +10,8 @@ const main = async function main() {
     canvasOpts: {
       el: 'pg-canvas',
       options: {
-        width: 1400,
-        height: 600,
+        width: 5000,
+        height: 5000,
       },
     },
     grid: 20,
