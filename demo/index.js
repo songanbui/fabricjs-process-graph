@@ -16,6 +16,7 @@ const main = async function main() {
     },
     grid: 20,
   });
+  window.demoPG = processGraph;
 
   // Initialize Chooser
   const draggableContainer = document.getElementById('pg-chooser-container');

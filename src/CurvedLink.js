@@ -261,8 +261,7 @@ export default class CurvedLink {
     if (!this.isValidConnection(linkPoint, shapeId, cardinal)) {
       return;
     }
-    const shape = this.canvas.getObjects()
-      .find((o) => o.id === shapeId);
+    const shape = this.canvas.linkableShapes[shapeId];
 
     // Disconnect existing object
     this.disconnectLink(linkPoint);
@@ -298,6 +297,7 @@ export default class CurvedLink {
     // shape.anchors[cardinal].opacity = 0;
     shape.anchors[cardinal].on('pg:position:modifying', this[linkPoint].handlers.onAnchorPositionModifying);
     shape.anchors[cardinal].on('pg:position:modified', this[linkPoint].handlers.onAnchorPositionModified);
+    shape.links[linkPoint].add(this.id);
 
     // Update Link
     const opts = {
@@ -314,6 +314,7 @@ export default class CurvedLink {
     if (this[linkPoint]) {
       this[linkPoint].shape.anchors[this[linkPoint].anchor].off('pg:position:modifying', this[linkPoint].handlers.onAnchorPositionModifying);
       this[linkPoint].shape.anchors[this[linkPoint].anchor].off('pg:position:modified', this[linkPoint].handlers.onAnchorPositionModified);
+      this[linkPoint].shape.links[linkPoint].delete(this.id);
       delete this[linkPoint];
     }
   }
@@ -439,9 +440,8 @@ export default class CurvedLink {
         // If link is connected to two shapes
         // If shapes are horizontally aligned (i.e. on top of each other), we move the Link center point a bit to the left
         if (this.start && this.end) {
-          // If shapes are vertically aligned (i.e. next to each other), we move the Link center point a bit to the top
-          if (Math.abs(start.y - end.y) < 10) {
-            center.x -= ((this.start.shape.width + this.end.shape.width) / 2);
+          if (Math.abs(start.x - end.x) < ((this.start.shape.shape.width + this.end.shape.shape.width) / 2)) {
+            center.x -= ((this.start.shape.shape.width + this.end.shape.shape.width) / 2);
           }
         }
 
@@ -456,8 +456,8 @@ export default class CurvedLink {
         // If link is connected to two shapes
         if (this.start && this.end) {
           // If shapes are vertically aligned (i.e. next to each other), we move the Link center point a bit to the top
-          if (Math.abs(start.y - end.y) < 10) {
-            center.y -= ((this.start.shape.height + this.end.shape.height) / 2);
+          if (Math.abs(start.y - end.y) < (this.start.shape.shape.height + this.end.shape.shape.height) / 2) {
+            center.y -= ((this.start.shape.shape.height + this.end.shape.shape.height) / 2);
           }
         }
 
@@ -475,6 +475,19 @@ export default class CurvedLink {
       controls.center2.x = center.x;
       controls.center2.y = controls.end.y;
     } else if (start.direction === 'east' || start.direction === 'west') {
+      // If link is connected to two shapes
+      if (this.start && this.end) {
+        // If shapes are vertically aligned (i.e. next to each other),
+        // and the shapes are between the start & end points,
+        // we move the Link center point a bit to the top
+        if (Math.abs(start.y - end.y) < (this.start.shape.shape.height + this.end.shape.shape.height) / 2
+          && ((start.direction === 'east' && start.x > end.x)
+            || (start.direction === 'west' && start.x < end.x))
+        ) {
+          center.y -= ((this.start.shape.shape.height + this.end.shape.shape.height) / 2);
+        }
+      }
+
       controls.center1.x = controls.start.x;
       controls.center1.y = center.y;
       controls.center2.x = controls.end.x;
@@ -483,8 +496,8 @@ export default class CurvedLink {
 
     // If link is connected to linked shapes and they are rotated, perform the rotation on the controls points
     // TODO: to improve
-    if (this.start && this.start.shape && this.start.shape.angle) {
-      const angle = ((this.start.shape.angle * Math.PI) / 180);
+    if (this.start && this.start.shape && this.start.shape.shape.angle) {
+      const angle = ((this.start.shape.shape.angle * Math.PI) / 180);
 
       const control = new fabric.Point(controls.start.x, controls.start.y);
       const origin = new fabric.Point(start.x, start.y);
@@ -493,8 +506,8 @@ export default class CurvedLink {
       controls.start.x = rotatedControl.x;
       controls.start.y = rotatedControl.y;
     }
-    if (this.end && this.end.shape && this.end.shape.angle) {
-      const angle = ((this.end.shape.angle * Math.PI) / 180);
+    if (this.end && this.end.shape && this.end.shape.shape.angle) {
+      const angle = ((this.end.shape.shape.angle * Math.PI) / 180);
 
       const control = new fabric.Point(controls.end.x, controls.end.y);
       const origin = new fabric.Point(end.x, end.y);
@@ -658,8 +671,8 @@ export default class CurvedLink {
   }
 
   isValidConnection(linkPoint, shapeId, cardinal) {
-    const shape = this.canvas.getObjects()
-      .find((o) => o.id === shapeId);
+    const shape = this.canvas.linkableShapes[shapeId];
+
     // Check not already connected
     if (linkPoint === 'start') {
       if (this.start && this.start.shape && this.start.shape.id === shape.id && this.start.cardinal === cardinal) {

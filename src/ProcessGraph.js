@@ -305,9 +305,43 @@ export default class ProcessGraph {
     return container;
   }
 
-  removeContainer(options) {
+  async removeContainer(options) {
     const { canvas } = this;
     if (options.id in canvas.linkableShapes) {
+      const container = canvas.linkableShapes[options.id];
+
+      // If container was connected in both anchors, connect the two other containers with each other
+      // And remove orphaned links
+      const startLinks = container.links.start;
+      const endLinks = container.links.end;
+      if (startLinks.size > 0 && endLinks.size > 0) {
+        startLinks.forEach(async (sId) => {
+          const startLink = canvas.links[sId];
+          endLinks.forEach(async (eId) => {
+            const endLink = canvas.links[eId];
+            console.log('caca');
+            await this.addLink({
+              id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
+              start: {
+                id: endLink.start.shape.id,
+                cardinal: endLink.start.anchor,
+              },
+              end: {
+                id: startLink.end.shape.id,
+                cardinal: startLink.end.anchor,
+              },
+            });
+          });
+        });
+        startLinks.forEach(async (sId) => {
+          await this.removeLink({ id: sId });
+        });
+        endLinks.forEach(async (eId) => {
+          await this.removeLink({ id: eId });
+        });
+      }
+
+      // Remove container
       canvas.linkableShapes[options.id].remove();
     }
   }
@@ -470,8 +504,8 @@ export default class ProcessGraph {
               const link = canvas.links[linkIds[c]];
               link.setActive(false);
               if (!hasCollision && link.path.intersectsWithObject(this.dragGhostObject.shape)) {
-                const hasEnoughClearance = !link.start.shape.intersectsWithObject(this.dragGhostObject.shape)
-                  && !link.end.shape.intersectsWithObject(this.dragGhostObject.shape);
+                const hasEnoughClearance = !link.start.shape.shape.intersectsWithObject(this.dragGhostObject.shape)
+                  && !link.end.shape.shape.intersectsWithObject(this.dragGhostObject.shape);
                 if (hasEnoughClearance) {
                   link.setActive(true);
                   hasCollision = true;
@@ -632,8 +666,8 @@ export default class ProcessGraph {
             const link = canvas.links[linkIds[c]];
             link.setActive(false);
             if (!added && link.path.intersectsWithObject(newContainer.shape)) {
-              const hasEnoughClearance = !link.start.shape.intersectsWithObject(newContainer.shape)
-                && !link.end.shape.intersectsWithObject(newContainer.shape);
+              const hasEnoughClearance = !link.start.shape.shape.intersectsWithObject(newContainer.shape)
+                && !link.end.shape.shape.intersectsWithObject(newContainer.shape);
               if (hasEnoughClearance) {
                 // Create two new links that will replace the overlapped one
                 // eslint-disable-next-line no-await-in-loop
@@ -645,7 +679,7 @@ export default class ProcessGraph {
                   },
                   end: {
                     id: newContainer.id,
-                    cardinal: newContainer.shape.left > link.start.shape.left ? 'west' : 'east',
+                    cardinal: newContainer.shape.left > link.start.shape.shape.left ? 'west' : 'east',
                   },
                   isTemporary: false,
                 });
@@ -654,7 +688,7 @@ export default class ProcessGraph {
                   id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
                   start: {
                     id: newContainer.id,
-                    cardinal: newContainer.shape.left > link.start.shape.left ? 'east' : 'west',
+                    cardinal: newContainer.shape.left > link.start.shape.shape.left ? 'east' : 'west',
                   },
                   end: {
                     id: link.end.shape.id,

@@ -21,13 +21,17 @@ export default class LinkableShape {
     this.options = options;
     this.id = id;
     this.canvas = canvas;
+    this.links = {
+      start: new Set(), // ids of links connected with start point
+      end: new Set(), // ids of links connected with end point
+    };
 
     // Set shape
     shape.set('type', 'linkableShape');
     shape.set({
       left, top, id, angle,
     });
-    this.shape = shape;
+    this.shape = shape; // actual fabricjs object
 
     // Show coordinates/angle when moving/rotating object
     const modificationBox = new fabric.Rect({

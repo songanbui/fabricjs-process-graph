@@ -145,6 +145,7 @@ export default class Container extends LinkableShape {
     // nextContainer.rotate(angle);
 
     const newLink = new CurvedLink({
+      id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
       canvas,
       start: {
         x: ap.left,
@@ -174,6 +175,7 @@ export default class Container extends LinkableShape {
       south: 'north',
     };
     const newLink = new CurvedLink({
+      id: `${Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1)}`,
       canvas,
       start: {
         x: ap.left,
